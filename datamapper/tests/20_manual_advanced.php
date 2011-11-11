@@ -33,6 +33,8 @@ class DataMapper_Tests_Manual_Advanced
 				'deeprelations' => 'Deep relationship queries',
 				'jointables' => 'Join table queries',
 				'includerelated' => 'Include on related queries',
+				'relatedcount' => 'Related count queries',
+				'includejoinfields' => 'Include Join fields',
 			),
 		);
 	}
@@ -124,7 +126,7 @@ class DataMapper_Tests_Manual_Advanced
 			),
 		);
 
-		$result = DataMapper_Tests::assertEqual($dmtesta->all_to_array(), $expected_result, '$model->->where_join_field("dmtestb", "data_C", "Table C join A_2 to B_2")->get()');
+		$result = DataMapper_Tests::assertEqual($dmtesta->all_to_array(), $expected_result, '$model->where_join_field("dmtestb", "data_C", "Table C join A_2 to B_2")->get()');
 	}
 
 	/*
@@ -319,7 +321,7 @@ class DataMapper_Tests_Manual_Advanced
 			),
 		);
 
-		$result = DataMapper_Tests::assertEqual($result, $expected_result, '$model->->include_related("related", array("data_B"), "append")->get();');
+		$result = DataMapper_Tests::assertEqual($result, $expected_result, '$model->include_related("related", array("data_B"), "append")->get();');
 
 		// include_related by deep string
 
@@ -459,6 +461,66 @@ class DataMapper_Tests_Manual_Advanced
 			),
 		);
 
-		$result = DataMapper_Tests::assertEqual($result, $expected_result, '$model->->include_related("deep/relation", array("id"), "append", TRUE)->->get();');
+		$result = DataMapper_Tests::assertEqual($result, $expected_result, '$model->include_related("deep/relation", array("id"), "append", TRUE)->get();');
 	}
+
+	/*
+	 * Related count queries
+	 */
+	public function relatedcount()
+	{
+		try
+		{
+			$dmtesta = new Dmtesta();
+			$dmtesta->include_related_count('dmtestb/dmteste')->get();
+		}
+		catch (Exception $e)
+		{
+			DataMapper_Tests::failed('Exception: '.$e->getMessage());
+		}
+
+		$expected_result = array(
+		);
+
+		$result = DataMapper_Tests::assertEqual($dmtesta->all_to_array(), $expected_result, '$model->include_related_count("dmtestb/dmteste"->get();');
+	}
+
+	/*
+	 * Include Join fields
+	 */
+	public function includejoinfields()
+	{
+		try
+		{
+			$dmtesta = new Dmtesta();
+			$dmtesta->get_by_id(1);
+			$dmtesta->dmtestb->include_join_fields()->get();
+			$result = $dmtesta->dmtestb->all_to_array(array('id', 'join_id', 'join_data_C'));
+		}
+		catch (Exception $e)
+		{
+			DataMapper_Tests::failed('Exception: '.$e->getMessage());
+		}
+
+		$expected_result = array(
+			array(
+				'id' => 1,
+				'join_id' => '1',
+				'join_data_C' => 'Table C join A_1 to B_1',
+			),
+			array(
+				'id' => 2,
+				'join_id' => '2',
+				'join_data_C' => 'Table C join A_1 to B_2',
+			),
+			array(
+				'id' => 3,
+				'join_id' => '3',
+				'join_data_C' => 'Table C join A_1 to B_3',
+			),
+		);
+
+		$result = DataMapper_Tests::assertEqual($result, $expected_result, '$model->dmtestb->include_join_fields()->get()');
+	}
+
 }

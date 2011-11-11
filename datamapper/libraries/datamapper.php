@@ -1848,6 +1848,24 @@ die($TODO = 'get_raw(): handle related queries');
 	// --------------------------------------------------------------------
 
 	/**
+	 * Includes the number of related items using a subquery.
+	 *
+	 * Default alias is {$related_field}_count
+	 *
+	 * @param	mixed	$related_field	related records to count
+	 * @param	string	$alias			alternative alias
+	 *
+	 * @return	DataMapper	returns self for method chaining
+	 */
+	public function include_related_count($related_field, $alias = NULL)
+	{
+		// for method chaining
+		return $this;
+	}
+
+	// --------------------------------------------------------------------
+
+	/**
 	 * if TRUE, the any extra fields on the join table will be included
 	 *
 	 * @param	bool	$include	if FALSE, turns back off the directive
@@ -2839,7 +2857,7 @@ die($TODO = 'get_raw(): handle related queries');
 
 		foreach ( $this->dm_config['keys'] as $key => $unused )
 		{
-			$result[$key] =>> $this->{$key};
+			$result[$key] = $this->{$key};
 		}
 
 		return $result;
@@ -3738,6 +3756,7 @@ die($TODO = 'deal with the new keys structure');
 		// many-to-many relationship
 		if ( $modela['type'] == 'has_many' AND $modelb['type'] == 'has_many' )
 		{
+//var_dump('many-to-many relationship');
 			// make sure we share the same join table
 			if ( $modela['join_table'] != $modela['join_table'] )
 			{
@@ -3775,6 +3794,10 @@ die($TODO = 'deal with the new keys structure');
 		elseif ( ( $modela['type'] == 'has_many' AND $modelb['type'] == 'belongs_to' )
 			OR ( $modela['type'] == 'has_one' AND $modelb['type'] == 'belongs_to' ) )
 		{
+//var_dump('many-to-one relationship, or one-to-one relationship, child -> parent');
+			// can't have join fields on this relation type
+			$this->dm_flags['include_join_fields'] = FALSE;
+
 			// build the join condition
 			$cond = '';
 			for ( $i = 0; $i < count($modelb['my_key']); $i++ )
@@ -3791,6 +3814,10 @@ die($TODO = 'deal with the new keys structure');
 		elseif ( ( $modela['type'] == 'belongs_to' AND $modelb['type'] == 'has_many' )
 			OR ( $modela['type'] == 'belongs_to' AND $modelb['type'] == 'has_one' ) )
 		{
+//var_dump('one-to-many relationship, or one-to-one relationship, parent -> child');
+			// can't have join fields on this relation type
+			$this->dm_flags['include_join_fields'] = FALSE;
+
 			// build the join condition
 			$cond = '';
 			for ( $i = 0; $i < count($modelb['my_key']); $i++ )
@@ -3808,6 +3835,33 @@ die($TODO = 'deal with the new keys structure');
 		{
 			throw new DataMapper_Exception("DataMapper: incompatible relation detected between '".$modela['related_class']."[".$modela['type']."]' and '".$modelb['my_class']."[".$modelb['type']."]'");
 		}
+
+		// do we need to add any join fields to this query?
+		if ( $this->dm_flags['include_join_fields'] )
+		{
+			// get the list of fields of the join table
+$TODO = "cache this somehow, it is rediculous to query for it every time!";
+			$fields = $this->db->field_data($modela['join_table']);
+
+			// drop all fields that are related keys in this many-to-many
+			foreach ( $fields as $key => $field )
+			{
+				if ( in_array($field->name, $modela['related_key']) OR in_array($field->name, $modelb['related_key']) )
+				{
+					unset($fields[$key]);
+				}
+			}
+
+			// add the other fields to the query
+			foreach ( $fields as $key => $field )
+			{
+				$this->db->select($this->dm_table_alias($modela['join_table']).'.'.$field->name.' AS join_'.$field->name);
+			}
+
+			// reset the flag
+			$this->dm_flags['include_join_fields'] = FALSE;
+		}
+
 	}
 
 	// -------------------------------------------------------------------------
