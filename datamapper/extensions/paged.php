@@ -77,17 +77,17 @@ class DataMapper_Paged
 
 		$dmobject->{$info_object}->page_size = $page_size;
 		$dmobject->{$info_object}->items_on_page = $dmobject->result_count();
-		$dmobject->{$info_object}->current_page = $page;
-		$dmobject->{$info_object}->current_row = $offset;
+		$dmobject->{$info_object}->current_page = intval($page);
+		$dmobject->{$info_object}->current_row = intval($offset);
 		$dmobject->{$info_object}->total_rows = $total;
-		$dmobject->{$info_object}->last_row = $last_row;
-		$dmobject->{$info_object}->total_pages = $total_pages;
+		$dmobject->{$info_object}->last_row = intval($last_row);
+		$dmobject->{$info_object}->total_pages = intval($total_pages);
 		$dmobject->{$info_object}->has_previous = $offset > 0;
 		$dmobject->{$info_object}->previous_page = max(1, $page-1);
 		$dmobject->{$info_object}->previous_row = max(0, $offset-$page_size);
 		$dmobject->{$info_object}->has_next = $page < $total_pages;
-		$dmobject->{$info_object}->next_page = min($total_pages, $page+1);
-		$dmobject->{$info_object}->next_row = min($last_row, $offset+$page_size);
+		$dmobject->{$info_object}->next_page = intval(min($total_pages, $page+1));
+		$dmobject->{$info_object}->next_row = intval(min($last_row, $offset+$page_size));
 
 		// return the DataMapper object for chaining
 		return $dmobject;

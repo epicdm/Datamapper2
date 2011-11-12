@@ -110,7 +110,26 @@ class DataMapper_Tests_Manual_Alternatives
 			),
 		);
 
-		$result = DataMapper_Tests::assertEqual($dmtesta->all_to_array(), $expected_result, '$model->get_paged();');
+		$result = DataMapper_Tests::assertEqual($dmtesta->all_to_array(), $expected_result, '$model->get_paged(); - results');
+
+		$expected_result = array(
+			'page_size' => 50,
+			'items_on_page' => 3,
+			'current_page' => 1,
+			'current_row' => 0,
+			'total_rows' => 3,
+			'last_row' => 0,
+			'total_pages' => 1,
+			'has_previous' => false,
+			'previous_page' => 1,
+			'previous_row' => 0,
+			'has_next' => false,
+			'next_page' => 1,
+			'next_row' => 0,
+		);
+
+		$result = DataMapper_Tests::assertEqual( (array) $dmtesta->paged, $expected_result, '$model->get_paged(); - paged info');
+
 	}
 
 	/*
