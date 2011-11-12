@@ -180,4 +180,4 @@ class DataMapper_Transactions {
 }
 
 /* End of file transactions.php */
-/* Location: ./application/third_party/datamapper/datamapper/transactions.php */
+/* Location: ./application/third_party/datamapper/extensions/transactions.php */

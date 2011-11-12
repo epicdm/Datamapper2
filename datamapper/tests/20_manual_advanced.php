@@ -393,7 +393,7 @@ class DataMapper_Tests_Manual_Advanced
 
 		$result = DataMapper_Tests::assertEqual($result, $expected_result, '$model->include_related("deep/relation")->get();');
 
-		// include_related by deep string
+		// include_related by deep string, and instantiation
 
 		try
 		{

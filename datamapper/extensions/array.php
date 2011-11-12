@@ -269,4 +269,4 @@ class DataMapper_Array
 }
 
 /* End of file array.php */
-/* Location: ./application/third_party/datamapper/datamapper/array.php */
+/* Location: ./application/third_party/datamapper/extensions/array.php */

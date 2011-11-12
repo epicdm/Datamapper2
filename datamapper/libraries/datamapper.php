@@ -50,7 +50,7 @@ class DataMapper implements IteratorAggregate
 	public static $CI = NULL;
 
 	/**
-	 * storage for the location of the Datamapper installation
+	 * storage for the location of the DataMapper installation
 	 *
 	 * @var string
 	 */
@@ -151,6 +151,10 @@ class DataMapper implements IteratorAggregate
 		'row_index'              => 'DataMapper_Rowindex',
 		'row_indices'            => 'DataMapper_Rowindex',
 
+		// core extension: paged methods
+		'get_paged'              => 'DataMapper_Paged',
+		'get_paged_iterated'     => 'DataMapper_Paged',
+
 		// core extension: transaction methods
 		'trans_begin'            => 'DataMapper_Transactions',
 		'trans_commit'           => 'DataMapper_Transactions',
@@ -213,7 +217,7 @@ class DataMapper implements IteratorAggregate
 		// prepare class
 		$class = strtolower($class);
 
-		// check for a datamapper core extension class
+		// check for a DataMapper core extension class
 		if ( strpos($class, 'datamapper_') === 0 )
 		{
 			foreach ( DataMapper::$dm_extension_paths as $path )
@@ -1010,7 +1014,7 @@ class DataMapper implements IteratorAggregate
 
 	public function __construct($param = NULL, $modelname = NULL)
 	{
-		// when first called, initialize datamapper itself
+		// when first called, initialize DataMapper itself
 		if ( ! DataMapper::$dm_initialized )
 		{
 			// make sure CI is up to spec
@@ -1548,9 +1552,11 @@ die($TODO = 'get_sql(): handle related queries');
 	 */
 	public function get_raw($limit = NULL, $offset = NULL, $handle_related = TRUE)
 	{
-		if ( $handle_related )
+		// Check if this is a related object and if so, perform a related get
+		if ( $handle_related AND ! $this->dm_handle_related() )
 		{
-die($TODO = 'get_raw(): handle related queries');
+			// invalid get request, return this for chaining.
+			return $this;
 		}
 
 		$this->dm_default_order_by();

@@ -60,3 +60,6 @@ New related parameter supported: array of related objects:
 -> $model->where_related( array($deep, $related), "field", "value")->get();
    ( as opposed to $model->where_related( "deep/related", "field", "value")->get() )
 
+Improvement on get_iterated()
+-> get_iterated() now re-uses a single object for all results, which means careful when you assign it to another variable (by reference!)
+

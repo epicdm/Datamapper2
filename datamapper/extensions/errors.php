@@ -151,4 +151,4 @@ class DataMapper_Errors {
 }
 
 /* End of file errors.php */
-/* Location: ./application/third_party/datamapper/datamapper/errors.php */
+/* Location: ./application/third_party/datamapper/extensions/errors.php */

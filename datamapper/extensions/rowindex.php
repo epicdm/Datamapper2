@@ -304,4 +304,4 @@ class DataMapper_Rowindex
 }
 
 /* End of file rowindex.php */
-/* Location: ./application/datamapper/rowindex.php */
+/* Location: ./application/third-party/datamapper/extensions/rowindex.php */
