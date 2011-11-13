@@ -141,7 +141,7 @@ function &DB($params = '', $active_record_override = NULL)
 	$driver = 'CI_DB_'.$params['dbdriver'].'_driver';
 
 	// load Datamappers DB interceptor class
-	require_once(APPPATH.'third_party/datamapper/core/DB_driver.php');
+	require_once(APPPATH.'third_party/datamapper/system/DB_driver.php');
 
 	$DB = new $driver($params);
 
@@ -159,4 +159,4 @@ function &DB($params = '', $active_record_override = NULL)
 }
 
 /* End of file DB.php */
-/* Location: ./application/third_party/datamapper/core/DB.php */
+/* Location: ./application/third_party/datamapper/system/DB.php */

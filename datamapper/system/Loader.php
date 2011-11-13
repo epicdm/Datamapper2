@@ -37,7 +37,7 @@ class DM_Loader extends $name
 			return FALSE;
 		}
 
-		require_once(APPPATH.'third_party/datamapper/core/DB.php');
+		require_once(APPPATH.'third_party/datamapper/system/DB.php');
 
 		if (\$return === TRUE)
 		{
@@ -62,4 +62,4 @@ unset($dmclass);
 $name = 'DM_Loader';
 
 /* End of file Loader.php */
-/* Location: ./application/third_party/datamapper/core/Loader.php */
+/* Location: ./application/third_party/datamapper/system/Loader.php */

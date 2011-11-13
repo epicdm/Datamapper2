@@ -47,4 +47,4 @@ unset($dmclass);
 $driver = 'DM_DB_Driver';
 
 /* End of file DB_driver.php */
-/* Location: ./application/third_party/datamapper/core/DB_driver.php */
+/* Location: ./application/third_party/datamapper/system/DB_driver.php */

@@ -348,19 +348,36 @@ class DataMapper implements IteratorAggregate
 	/**
 	 * manually add paths for the extensions autoloader
 	 *
-	 * @param	mixed	$paths	path or array of paths to search
+	 * @param	mixed	$paths		path or array of paths to search
+	 * @param	string	$position	position to insert the path (after,before)
 	 */
-	public static function add_extension_path($paths)
+	public static function add_extension_path($paths, $position = 'after')
 	{
 		// make sure $paths is an array
 		! is_array($paths) AND $paths = array($paths);
 
 		foreach($paths as $path)
 		{
+			// check if the path exists
 			$path = realpath(rtrim($path, DS) . DS);
-			if ( is_dir($path) AND ! in_array($path, DataMapper::$dm_extension_paths))
+			if ( is_dir($path) )
 			{
-				DataMapper::$dm_extension_paths[] = $path;
+				// if it's present, remove it
+				if ( $index = array_search($path, DataMapper::$dm_extension_paths) )
+				{
+					unset(DataMapper::$dm_extension_paths[$index]);
+				}
+
+				// and insert it in the required spot
+				if ( $position == 'before' )
+				{
+					array_unshift(DataMapper::$dm_extension_paths[], $path);
+
+				}
+				elseif ( $position == 'after' )
+				{
+					DataMapper::$dm_extension_paths[] = $path;
+				}
 			}
 		}
 	}
@@ -1043,7 +1060,7 @@ class DataMapper implements IteratorAggregate
 			DataMapper::$dm_path = __DIR__;
 
 			// store the path to the DataMapper extension files
-			DataMapper::$dm_extension_paths = array(realpath(__DIR__.DS.'..'.DS.'extensions'));
+			DataMapper::$dm_extension_paths = array(realpath(__DIR__.DS.'..'.DS.'core'), realpath(__DIR__.DS.'..'.DS.'extensions'));
 
 			// load the global config
 			DataMapper::$CI->config->load('datamapper', TRUE, TRUE);

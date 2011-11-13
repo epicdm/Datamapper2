@@ -38,4 +38,4 @@ unset($dmclass);
 $name = 'DM_Lang';
 
 /* End of file Lang.php */
-/* Location: ./application/third_party/datamapper/core/Lang.php */
+/* Location: ./application/third_party/datamapper/system/Lang.php */
