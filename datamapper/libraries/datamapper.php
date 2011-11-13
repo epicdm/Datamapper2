@@ -1087,6 +1087,9 @@ class DataMapper implements IteratorAggregate
 			// initialize some object properties
 			$this->dm_original = $this->dm_current = new DataMapper_Datastorage();
 
+			// set a new error object
+			$this->error = new DataMapper_Errors($this);
+
 			// was a parameter passed?
 			if ( ! is_null($param) )
 			{
@@ -1108,9 +1111,6 @@ class DataMapper implements IteratorAggregate
 					$this->get_where($param);
 				}
 			}
-
-			// set a new error object
-			$this->error = new DataMapper_Errors($this);
 		}
 	}
 
@@ -1612,6 +1612,119 @@ die($TODO = 'get_sql(): handle related queries');
 	// --------------------------------------------------------------------
 
 	/**
+	 * Count
+	 *
+	 * Returns the total count of the object records from the database.
+	 * If on a related object, returns the total count of related objects records.
+	 *
+	 * @param	array	$exclude_keys	a list of keys to exclude from the count
+	 * @param	array	$column			Internal use only. If provided, use this column for the DISTINCT instead of the key column(s)
+	 *
+	 * @return	int Number of rows in query.
+	 */
+	public function count($exclude_keys = array(), $columns = array())
+	{
+		// is this a related count?
+		if ( ! empty($this->dm_values['parent']) )
+		{
+			$this->dm_handle_related();
+		}
+
+		// add the table
+		$this->db->from($this->dm_config['table'].' '.$this->dm_table_alias($this->dm_config['model'], TRUE));
+
+		// any keys to exclude
+		if ( ! empty($exclude_keys) )
+		{
+			$req_count = count($this->dm_config['keys']);
+			$count = 0;
+			foreach ( $this->dm_config['keys'] as $key => $unused )
+			{
+				// storage for the key values of this field
+				$in = array();
+
+				// add the keys to be excluded
+				foreach ( $exclude_keys as $key_value )
+				{
+					is_array($key_value) AND count($key_value) == $req_count AND $in[] = $key_value[$count];
+				}
+
+				// add the exclusion to the query
+				$this->db->where_not_in($this->add_table_name($key), $in);
+
+				// get the next field (if any)
+				$count++;
+			}
+		}
+
+		// prefix any columns passed
+		foreach ( $columns as $index => $column )
+		{
+			$columns[$index] = $this->add_table_name($column);
+		}
+
+		// this will only work for single key tables
+		if ( count($columns) == 1 )
+		{
+			// do a COUNT DISTINCT
+			$select = 'SELECT COUNT(DISTINCT ' . $this->db->_protect_identifiers(reset($columns)) . ') AS ';
+		}
+		else
+		{
+			$select = $this->db->_count_string;
+		}
+
+		// call the CI driver to compile the query
+		$sql = $this->db->dm_call_method('_compile_select', $select . $this->db->_protect_identifiers('numrows'));
+
+		// run the count query
+		$query = $this->db->query($sql);
+
+		// and reset the db driver
+		$this->db->dm_call_method('_reset_select');
+
+		// return the count result
+		if ($query->num_rows() == 0)
+		{
+			return 0;
+		}
+		else
+		{
+			$row = $query->row();
+			return intval($row->numrows);
+		}
+	}
+
+	// --------------------------------------------------------------------
+
+	/**
+	 * returns the total count of distinct object records from the database
+	 * if on a related object, returns the total count of related objects records.
+	 *
+	 * @param	array	$exclude_keys	a list of keys to exclude from the count
+	 * @param	array	$column			if provided, use this column for the DISTINCT instead of the key column(s)
+	 *
+	 * @return	int	number of rows in query
+	 */
+	public function count_distinct($exclude_ids = NULL, $columns = NULL)
+	{
+		// get the default for the distinct keys if needed
+		if ( is_null($columns) )
+		{
+			$columns = array();
+			foreach ( $this->dm_config['keys'] as $key => $unused )
+			{
+				$columns[] = $key;
+			}
+		}
+
+		// return the count
+		return $this->count($exclude_ids, $columns);
+	}
+
+	// --------------------------------------------------------------------
+
+	/**
 	 * clears the current object
 	 *
 	 * @return	DataMapper	returns self for method chaining
@@ -1622,6 +1735,7 @@ die($TODO = 'get_sql(): handle related queries');
 		$this->all = array();
 
 		// clear errors
+
 		$this->error->clear();
 
 		// clear this objects properties
