@@ -1106,8 +1106,18 @@ class DataMapper implements IteratorAggregate
 				else
 				{
 					// backwards compatibility with DataMapper v1.x
-					$TODO = 'fixed id key name!';
-					! is_array($param) and $param = array('id' => $param );
+					if ( ! is_array($param) )
+					{
+						if ( count($this->dm_config['keys']) !== 1 )
+						{
+							throw new DataMapper_Exception("DataMapper: you can not pass a single key value when constructing the '".$this->dm_config['model']."' model. It requires multiple keys");
+						}
+
+						reset($this->dm_config['keys']);
+						$param = array(key($this->dm_config['keys']) => $param );
+					}
+
+					// load the requested record
 					$this->get_where($param);
 				}
 			}
@@ -1477,7 +1487,7 @@ class DataMapper implements IteratorAggregate
 			}
 			else
 			{
-				$TODO = 'Make a decision on dealing with this or not... Version 1.x didnt';
+$TODO = 'Make a decision on dealing with this or not... Version 1.x didnt';
 //				throw new DataMapper_Exception('DataMapper: called get() on an empty validated object');
 			}
 		}
@@ -2187,7 +2197,7 @@ die($TODO = 'get_sql(): handle related queries');
 		// get the relationship definition seen from the related model
 		$other_relation = $object->dm_find_relationship($current->dm_config['model']);
 
-		$TODO = 'prevent un-needed joins when selecting on related keys only';
+$TODO = 'prevent un-needed joins when selecting on related keys only';
 
 		// add the join to the query
 		$current->dm_add_relation($relation, $other_relation);
@@ -2235,7 +2245,7 @@ die($TODO = 'get_sql(): handle related queries');
 				}
 
 				// add the field to the selection
-				$selected[] = $current->dm_table_alias($other_relation['my_class']).'.'.$field.(empty($append_field)?'':' AS '.$append_field);
+				$selected[] = $current->dm_table_alias($other_relation['my_class']).'.'.$field.(empty($append_field)?'':' AS '.$this->db->_protect_identifiers($append_field));
 			}
 		}
 
@@ -3858,7 +3868,7 @@ die($TODO = 'deal with the new keys structure');
 			// selection is another object
 			elseif ( $arguments[0] instanceOf DataMapper )
 			{
-				die($TODO = 'related query based on a passed object');
+die($TODO = 'related query based on a passed object');
 			}
 			else
 			{
@@ -3868,7 +3878,7 @@ die($TODO = 'deal with the new keys structure');
 			// get the relationship definition seen from the related model
 			$other_relation = $object->dm_find_relationship($current->dm_config['model']);
 
-			$TODO = 'prevent un-needed joins when selecting on related keys only';
+$TODO = 'prevent un-needed joins when selecting on related keys only';
 
 			// add the join to the query
 			$current->dm_add_relation($relation, $other_relation, $join_only);
@@ -4015,8 +4025,8 @@ die($TODO = 'deal with the new keys structure');
 		// do we need to add any join fields to this query?
 		if ( $this->dm_flags['include_join_fields'] )
 		{
+$TODO = 'cache this somehow, it is rediculous to query for it every time!';
 			// get the list of fields of the join table
-$TODO = "cache this somehow, it is rediculous to query for it every time!";
 			$fields = $this->db->field_data($modela['join_table']);
 
 			// drop all fields that are related keys in this many-to-many
@@ -4031,7 +4041,7 @@ $TODO = "cache this somehow, it is rediculous to query for it every time!";
 			// add the other fields to the query
 			foreach ( $fields as $key => $field )
 			{
-				$this->db->select($this->dm_table_alias($modela['join_table']).'.'.$field->name.' AS join_'.$field->name);
+				$this->db->select($this->dm_table_alias($modela['join_table']).'.'.$field->name.' AS '.$this->db->_protect_identifiers('join_'.$field->name));
 			}
 
 			// reset the flag
