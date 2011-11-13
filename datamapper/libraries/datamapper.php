@@ -1825,6 +1825,62 @@ die($TODO = 'get_sql(): handle related queries');
 	// --------------------------------------------------------------------
 
 	/**
+	 * if this object is related to the provided object, returns TRUE,
+	 * otherwise returns FALSE
+	 *
+	 * optionally can be provided a related field and a key value
+	 *
+	 * @param	mixed	$related_field	the related object or field name
+	 * @param	array	$keys			key value to compare to if $related_field is a string
+	 *
+	 * @return	bool	TRUE or FALSE if this object is related to $related_field
+	 */
+	public function is_related_to($related_field, $keys = array())
+	{
+		// is a DataMapper object passed?
+		if ( $related_field instanceOf DataMapper )
+		{
+			// add a where clause for the key values if needed
+			if ( ! empty($keys) )
+			{
+				foreach ( $related_field->dm_get_config('keys') as $key => $unused )
+				{
+					$this->db->where($this->add_table_name($key), $related_field->{$key});
+				}
+			}
+
+			// and get the related model name
+			$related_field = $related_field->dm_get_config('model');
+		}
+
+		// no, it's a relationship name
+		else
+		{
+			// find the relation definition
+			if ( ! $relation = $this->dm_find_relationship($related_field) )
+			{
+				throw new DataMapper_Exception("DataMapper: calling is_related_to() on an unrelated relation name");
+			}
+
+			// add a where clause for the key values if needed
+			if ( ! empty($keys) )
+			{
+				reset($keys);
+				foreach ( $relation['my_key'] as $key )
+				{
+					$this->db->where($this->add_table_name($key), current($keys));
+					next($keys);
+				}
+			}
+		}
+
+		// run the count query, and return the result
+		return ($this->{$related_field}->count() > 0);
+	}
+
+	// --------------------------------------------------------------------
+
+	/**
 	 * sets the SELECT portion of the query
 	 *
 	 * @param	mixed	$select 	field(s) to select, array or comma separated string

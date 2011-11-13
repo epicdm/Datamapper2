@@ -32,6 +32,7 @@ class DataMapper_Tests_Manual_Counting
 			'methods' => array(
 				'normal' => 'Counting methods',
 				'related' => 'Related counting methods',
+				'isrelated' => 'Relation check methods',
 			),
 		);
 	}
@@ -140,5 +141,51 @@ class DataMapper_Tests_Manual_Counting
 		}
 
 		$result = DataMapper_Tests::assertEqual($result, 1, '$model->dmtestb->count();');
+	}
+
+	/*
+	 * Relation check methods
+	 */
+	public function isrelated()
+	{
+		// test for unrelated record
+		try
+		{
+			$dmtesta = new Dmtesta(2);
+			$result = $dmtesta->is_related_to('dmtestb', array(1));
+		}
+		catch (Exception $e)
+		{
+			DataMapper_Tests::failed('Exception: '.$e->getMessage());
+		}
+
+		$result = DataMapper_Tests::assertEqual($result, false, '$model->is_related_to("dmtestb", array(1)); - not related');
+
+		// test for related record
+		try
+		{
+			$dmtesta = new Dmtesta(2);
+			$result = $dmtesta->is_related_to('dmtestb', array(2));
+		}
+		catch (Exception $e)
+		{
+			DataMapper_Tests::failed('Exception: '.$e->getMessage());
+		}
+
+		$result = DataMapper_Tests::assertEqual($result, true, '$model->is_related_to("dmtestb", array(2)); - related');
+
+		// test for related object
+		try
+		{
+			$dmtesta = new Dmtesta(2);
+			$dmtestb = new Dmtestb(2);
+			$result = $dmtesta->is_related_to($dmtestb);
+		}
+		catch (Exception $e)
+		{
+			DataMapper_Tests::failed('Exception: '.$e->getMessage());
+		}
+
+		$result = DataMapper_Tests::assertEqual($result, true, '$model->is_related_to($dmtestb); - related to object');
 	}
 }
