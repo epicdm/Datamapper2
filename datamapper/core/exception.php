@@ -30,4 +30,4 @@ class DataMapper_Exception extends Exception
 }
 
 /* End of file exception.php */
-/* Location: ./application/third_party/datamapper/extensions/exception.php */
+/* Location: ./application/third_party/datamapper/core/exception.php */

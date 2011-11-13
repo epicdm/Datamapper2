@@ -160,8 +160,8 @@ class DataMapper_Tests
 		}
 
 		// print the successes and failures
-		self::$success AND self::success(self::$success.' of '.(self::$success+self::$failed).' tests finished successfully', 3);
-		self::$failed AND self::failed(self::$failed.' of '.(self::$success+self::$failed-1).' tests failed', 3);
+		self::$success AND self::success(self::$success.' of '.(self::$success+self::$failed).' tests finished successfully', 1);
+		self::$failed AND self::failed(self::$failed.' of '.(self::$success+self::$failed-1).' tests failed', 1);
 
 		// benchmark
 		self::$CI->benchmark->mark('datamapper_tests_run_end');

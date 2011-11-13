@@ -119,4 +119,4 @@ class DataMapper_DatasetIterator implements Iterator, Countable
 }
 
 /* End of file datasetiterator.php */
-/* Location: ./application/third_party/datamapper/extensions/datasetiterator.php */
+/* Location: ./application/third_party/datamapper/core/datasetiterator.php */

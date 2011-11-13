@@ -51,4 +51,4 @@ class DataMapper_Datastorage
 }
 
 /* End of file datastorage.php */
-/* Location: ./application/third_party/datamapper/extensions/datastorage.php */
+/* Location: ./application/third_party/datamapper/core/datastorage.php */

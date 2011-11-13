@@ -151,6 +151,11 @@ class DataMapper implements IteratorAggregate
 		'row_index'              => 'DataMapper_Rowindex',
 		'row_indices'            => 'DataMapper_Rowindex',
 
+		// core extension: function methods
+		'func'                   => 'DataMapper_Functions',
+		'dm_func'                => 'DataMapper_Functions',
+		'dm_field_func'          => 'DataMapper_Functions',
+
 		// core extension: paged methods
 		'get_paged'              => 'DataMapper_Paged',
 		'get_paged_iterated'     => 'DataMapper_Paged',
@@ -1348,17 +1353,8 @@ class DataMapper implements IteratorAggregate
 			'_field_func', '_func'
 		);
 
-		// are we calling an extension method?
-		if ( isset(DataMapper::$dm_extension_methods[$method]) )
-		{
-			// add our object to the top of the argument stack
-			array_unshift($arguments, $this);
-
-			// and call the extension method
-			return call_user_func_array(DataMapper::$dm_extension_methods[$method].'::'.$method, $arguments);
-		}
-
 		// check if a watched method is called
+		$new_method = FALSE;
 		foreach ( $watched_methods as $watched_method )
 		{
 			// see if called method is a watched method
@@ -1370,24 +1366,36 @@ class DataMapper implements IteratorAggregate
 				{
 					// watched method is in the middle
 					$new_method = 'dm_' . trim($watched_method, '_');
-					if ( ! method_exists($this, $new_method) )
-					{
-						throw new DataMapper_Exception("DataMapper: Called method '$new_method' does not exist");
-					}
-					return $this->{$new_method}($pieces[0], array_merge(array($pieces[1]), $arguments));
+					$arguments = array_merge(array($pieces[0]), array(array_merge(array($pieces[1]), $arguments)));
+					break;
 				}
 				else
 				{
 					// watched method is a prefix or suffix
 					$new_method = 'dm_' . trim($watched_method, '_');
-					if ( ! method_exists($this, $new_method) )
-					{
-						throw new DataMapper_Exception("DataMapper: Called method '$method' does not exist");
-					}
-					return $this->{$new_method}(str_replace($watched_method, '', $method), $arguments);
+					$arguments = array_merge(array(str_replace($watched_method, '', $method)), array($arguments));
 					break;
 				}
 			}
+		}
+
+		// update the method name if needed
+		$new_method and $method = $new_method;
+
+		// are we calling an extension method?
+		if ( isset(DataMapper::$dm_extension_methods[$method]) )
+		{
+			// add our object to the top of the argument stack
+			array_unshift($arguments, $this);
+
+			// and call the extension method
+			return call_user_func_array(DataMapper::$dm_extension_methods[$method].'::'.$method, $arguments);
+		}
+
+		// are we calling an internal method?
+		if ( method_exists($this, $method) )
+		{
+			return call_user_func_array(array($this, $method), $arguments);
 		}
 
 //		echo '<hr /';
@@ -2188,8 +2196,8 @@ $TODO = 'Make a decision on dealing with this or not... Version 1.x didnt';
 
 		// reset any select present, and add our count clause
 		$object->db->ar_select = array();
-		$object->select('COUNT(*) AS count');
-//		$object->select_func('COUNT', '*', 'count');
+//		$object->select('COUNT(*) AS count');
+		$object->select_func('COUNT', '*', 'count');
 
 		// add the where that determines the subquery selection
 		foreach ( $this->dm_get_config('keys') as $key => $unused )
@@ -3465,6 +3473,44 @@ $TODO = 'prevent un-needed joins when selecting on related keys only';
 		return FALSE;
 	}
 
+	// --------------------------------------------------------------------
+
+	/**
+	 * handles specialized where_in clauses, like subqueries and functions
+	 *
+	 * @ignore
+	 *
+	 * @param	string	$query 	query function
+	 * @param	string	$field	Ffield for Query function
+	 * @param	mixed	$value	value for Query function
+	 * @param	mixed	$extra	if included, overrides the default assumption of FALSE for the third parameter to $query
+	 *
+	 * @return	DataMapper	returns self for method chaining
+	 */
+	public function dm_alter_where_in($query, $field, $value, $extra = NULL)
+	{
+		// deal with where_in()
+		if ( strpos($query, 'where_in') !== FALSE )
+		{
+			$query = str_replace('_in', '', $query);
+			$field .= ' IN ';
+		}
+
+		// deal with where_not_in
+		elseif ( strpos($query, 'where_not_in') !== FALSE )
+		{
+			$query = str_replace('_not_in', '', $query);
+			$field .= ' NOT IN ';
+		}
+
+		// make sure $extra has the correct value
+		is_null($extra) AND $extra = FALSE;
+
+		// return the result
+		return $this->{$query}($field, $value, $extra);
+	}
+
+
 	// -------------------------------------------------------------------------
 	// DataMapper protected methods
 	// -------------------------------------------------------------------------
@@ -3603,13 +3649,17 @@ die($TODO = $query.' type subquery is not implemented yet');
 	 *
 	 * @ignore
 	 *
-	 * @param	string $field Field to look at.
-	 * @param	array $value Arguments to this method.
-	 * @return	DataMapper Returns self for method chaining.
+	 * @param	string	$field	field to look at
+	 * @param	array	$value	arguments to this method
+	 *
+	 * @return	DataMapper	returns self for method chaining
 	 */
 	protected function dm_get_by($field, $value = array())
 	{
-		if (isset($value[0]))
+		// backward compatibility
+		is_array($value) OR $value = array($value);
+
+		if ( isset($value[0]) )
 		{
 			$this->where($field, $value[0]);
 		}

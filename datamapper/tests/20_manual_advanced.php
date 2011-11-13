@@ -478,6 +478,7 @@ class DataMapper_Tests_Manual_Advanced
 		catch (Exception $e)
 		{
 			DataMapper_Tests::failed('Exception: '.$e->getMessage());
+			$result = NULL;
 		}
 
 		$expected_result = array(
