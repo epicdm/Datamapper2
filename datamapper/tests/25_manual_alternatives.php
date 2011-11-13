@@ -300,11 +300,11 @@ class DataMapper_Tests_Manual_Alternatives
 			$result = null;
 		}
 
-		$expected_result = "SELECT `DM_0`.*, `DM_1`.`id` AS dmtestb_id, `DM_1`.`data_B` AS dmtestb_data_B\n".
-							"FROM (`dmtests_A` `DM_0`)\n".
-							"LEFT OUTER JOIN `dmtests_C` `DM_5` ON `DM_5`.`fk_id_A` = `DM_0`.`id`\n".
-							"LEFT OUTER JOIN `dmtests_B` `DM_1` ON `DM_5`.`fk_id_B` = `DM_1`.`id`\n".
-							"ORDER BY `DM_0`.`id` ASC, `dmtestb_data_b` ASC";
+		$expected_result = "SELECT `DMTA_1`.`id` AS `dmtestb_id`, `DMTA_1`.`data_B` AS `dmtestb_data_B`, `DMTA_0`.*\n".
+							"FROM (`dmtests_A` `DMTA_0`)\n".
+							"LEFT OUTER JOIN `dmtests_C` `DMTA_5` ON `DMTA_5`.`fk_id_A` = `DMTA_0`.`id`\n".
+							"LEFT OUTER JOIN `dmtests_B` `DMTA_1` ON `DMTA_5`.`fk_id_B` = `DMTA_1`.`id`\n".
+							"ORDER BY `DMTA_0`.`id` ASC, `dmtestb_data_b` ASC";
 
 		$result = DataMapper_Tests::assertEqual($result, $expected_result, '$model->include_related("dmtestb")->order_by("id", "ASC")->order_by("dmtestb_data_b", "ASC")->get_sql();');
 	}

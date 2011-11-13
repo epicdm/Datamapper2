@@ -191,6 +191,13 @@ class DataMapper implements IteratorAggregate
 	 */
 	protected static $alias_counter = 0;
 
+	/**
+	 * storage for subquery counter
+	 *
+	 * @var array
+	 */
+	protected static $subquery_counter = 0;
+
 	// --------------------------------------------------------------------
 
 	/**
@@ -591,7 +598,7 @@ class DataMapper implements IteratorAggregate
 				$object->dm_config['table'] = $object->dm_config['config']['prefix'] . $object->dm_config['table'];
 
 				// store the alias for this model / table combination
-				DataMapper::$dm_table_aliases[$model] = 'DM_'.self::$alias_counter++;
+				DataMapper::$dm_table_aliases[$model] = 'DMTA_'.self::$alias_counter++;
 
 				// check if we have a custom primary keys
 				if ( isset($object->primary_key) AND is_array($object->primary_key) AND ! empty($object->primary_key) )
@@ -1459,6 +1466,24 @@ class DataMapper implements IteratorAggregate
 			return $this;
 		}
 
+		// check if we have selected something from the current table
+		$found = FALSE;
+		$alias = $this->db->_protect_identifiers(self::$dm_table_aliases[$this->dm_config['model']]);
+		foreach ( $this->db->ar_select as $select )
+		{
+			// filter out subqueries
+			if ( strpos($select, '(SELECT') !== 0 )
+			{
+				if ( $found = (strpos($select, $alias) !== FALSE) )
+				{
+					break;
+				}
+			}
+		}
+
+		// and add a select * if no reference was found
+		$found OR $this->select();
+
 		// storage for the query result
 		$query = FALSE;
 
@@ -1519,16 +1544,45 @@ $TODO = 'Make a decision on dealing with this or not... Version 1.x didnt';
 	 *
 	 * This can be used to generate subqueries.
 	 *
-	 * @param	integer|NULL	$limit	limit the number of results
-	 * @param	integer|NULL	$offset	offset the results when limiting
+	 * @param	int		$limit			limit the number of results
+	 * @param	int		$offset			offset the results when limiting
+	 * @param	bool	$handle_related	Internal use only. if TRUE, add related tables
+	 * @param	bool	$subquery		Internal use only. if TRUE we're building a subquery
 	 *
 	 * @return	string	SQL as a string
 	 */
-	public function get_sql($limit = NULL, $offset = NULL, $handle_related = FALSE)
+	public function get_sql($limit = NULL, $offset = NULL, $handle_related = FALSE, $subquery = FALSE)
 	{
 		if ( $handle_related )
 		{
-die($TODO = 'get_sql(): handle related queries');
+			// Check if this is a related object and if so, perform a related get
+			if ( ! $this->dm_handle_related() )
+			{
+				// invalid request
+				return FALSE;
+			}
+		}
+
+		// add a select(*) if needed
+		if ( ! $subquery )
+		{
+			// check if we have selected something from the current table
+			$found = FALSE;
+			$alias = $this->db->_protect_identifiers(self::$dm_table_aliases[$this->dm_config['model']]);
+			foreach ( $this->db->ar_select as $select )
+			{
+				// filter out subqueries
+				if ( strpos($select, '(SELECT') !== 0 )
+				{
+					if ( $found = (strpos($select, $alias) !== FALSE) )
+					{
+						break;
+					}
+				}
+			}
+
+			// and add a select * if no reference was found
+			$found OR $this->select();
 		}
 
 		$this->db->dm_call_method('_track_aliases', $this->dm_config['table']);
@@ -2045,6 +2099,90 @@ die($TODO = 'get_sql(): handle related queries');
 	 */
 	public function include_related_count($related_field, $alias = NULL)
 	{
+		// make sure we have a field alias
+		if(is_null($alias))
+		{
+			$alias = str_replace('/', '_', $related_field) . '_count';
+		}
+
+		// if a deep relationship string is passed, split it
+		strpos($related_field, '/') !== FALSE AND $related_field = explode('/', $related_field);
+
+		// make sure related field(s) is an array
+		is_array($related_field) OR $related_field = array($related_field);
+
+		// reverse the array, we need the last relation first
+		$related_field = array_reverse($related_field);
+
+		// storage for the subquery object
+		$object = NULL;
+
+		// process the passed relationships
+		foreach ( $related_field as $related )
+		{
+			// do we have an object to start with?
+			if ( is_null($object) )
+			{
+				if ( $related instanceOf DataMapper )
+				{
+					$object = $related->get_clone();
+				}
+				else
+				{
+					$object = new $related();
+				}
+			}
+			else
+			{
+				is_string($related) AND $related = new $related();
+
+				if ( $related instanceOf DataMapper )
+				{
+					// find out what the relation is
+					$relation = $object->dm_find_relationship($related->dm_get_config('model'));
+
+					// get the relationship definition seen from the related model
+					$other_relation = $related->dm_find_relationship($object->dm_config['model']);
+
+					if ( ! $relation OR ! $other_relation )
+					{
+						throw new DataMapper_Exception("DataMapper: Unable to relate '{$related->dm_config['model']}'");
+					}
+
+					// add the join to the query
+					$object->dm_add_relation($relation, $other_relation);
+				}
+			}
+		}
+
+		// add the relation to the current model
+		$relation = $related->dm_find_relationship($this->dm_get_config('model'));
+
+		// get the relationship definition seen from the related model
+		$other_relation = $this->dm_find_relationship($related->dm_config['model']);
+
+		if ( ! $relation OR ! $other_relation )
+		{
+			throw new DataMapper_Exception("DataMapper: Unable to relate '{$object->dm_config['model']}'");
+		}
+
+		// add the join to the query
+		$object->dm_add_relation($relation, $other_relation);
+
+		// reset any select present, and add our count clause
+		$object->db->ar_select = array();
+		$object->select('COUNT(*) AS count');
+//		$object->select_func('COUNT', '*', 'count');
+
+		// add the where that determines the subquery selection
+		foreach ( $this->dm_get_config('keys') as $key => $unused )
+		{
+			$this->db->where($this->add_table_name($key), $this->db->_protect_identifiers('${parent}.'.$key), FALSE);
+		}
+
+		// add the subquery to the select
+		$this->select_subquery($object, $alias);
+
 		// for method chaining
 		return $this;
 	}
@@ -3078,7 +3216,7 @@ $TODO = 'prevent un-needed joins when selecting on related keys only';
 	{
 		if ( ! isset(DataMapper::$dm_table_aliases[$model]) )
 		{
-			DataMapper::$dm_table_aliases[$model] = 'DM_'.self::$alias_counter++;
+			DataMapper::$dm_table_aliases[$model] = 'DMTA_'.self::$alias_counter++;
 		}
 		return $protect ? $this->db->protect_identifiers(DataMapper::$dm_table_aliases[$model]) : DataMapper::$dm_table_aliases[$model];
 	}
@@ -3314,6 +3452,104 @@ $TODO = 'prevent un-needed joins when selecting on related keys only';
 	// DataMapper protected methods
 	// -------------------------------------------------------------------------
 
+	/**
+	 * @ignore
+	 *
+	 * @param	string	$query	name of query function
+	 * @param	array	$args	arguments for subquery
+	 *
+	 * @return	DataMapper	returns self for method chaining
+	 */
+	protected function dm_subquery($query, $arguments)
+	{
+		// make sure we have arguments
+		if ( count($arguments) < 1 )
+		{
+			throw new DataMapper_Exception("DataMapper: invalid arguments on {$query}_subquery: there must be at least one argument");
+		}
+
+		// selects are different from other subqueries
+		if($query == 'select')
+		{
+			// select subquery needs two arguments
+			if ( count($arguments) < 2 )
+			{
+				throw new DataMapper_Exception("DataMapper: invalid arguments on select_subquery: there must be exactly 2 arguments.");
+			}
+
+			// get the parsed sql and the
+			$sql = $this->dm_parse_subquery_sql($arguments[0]);
+			$alias = $arguments[1];
+
+			// we can't use the normal select method, because CI likes to breaky
+			$this->dm_manual_select("$sql AS $alias");
+		}
+		else
+		{
+die($TODO = $query.' type subquery is not implemented yet');
+		}
+
+		// for method chaining
+		return $this;
+	}
+
+	// -------------------------------------------------------------------------
+
+	/**
+	 * parses and protects a subquery
+	 *
+	 * automatically replaces the special ${parent} argument with a reference to
+	 * this table. also makes sure all aliases are unique
+	 *
+	 * @ignore
+	 *
+	 * @param	mixed	$sql	SQL string to process, or object to extract the SQL from
+	 *
+	 * @return	string	processed SQL string
+	 */
+	protected function dm_parse_subquery_sql($sql)
+	{
+		// if a DataMapper object is passed, extract the SQL
+		if ( $sql instanceOf DataMapper )
+		{
+			$sql = '(' . $sql->get_sql(NULL, NULL, FALSE, TRUE) . ')';
+		}
+
+		// determine the alias pattern
+		$search = '/'.$this->db->_escape_identifiers('(DMTA_)(\d+)').'/';
+
+		// determine the current subquery prefix
+		$replace = 'DMSQ'.(self::$subquery_counter++).'_$2';
+
+		// make the aliases used unique for this subquery
+		$sql = preg_replace($search, $replace, $sql);
+
+		// replace the placeholder by the current table name, and return the SQL
+		return str_replace('${parent}', $this->dm_table_alias($this->dm_config['model']), $sql);
+	}
+
+	// --------------------------------------------------------------------
+
+	/**
+	 * manually adds an item to the SELECT column, to prevent it from
+	 * being broken by AR->select
+	 *
+	 * @ignore
+	 *
+	 * @param	string	$value New SELECT value
+	 */
+	protected function dm_manual_select($value)
+	{
+		// note: copied from system/database/DB_activerecord.php
+		$this->db->ar_select[] = $value;
+
+		if ($this->db->ar_caching === TRUE)
+		{
+			$this->db->ar_cache_select[] = $value;
+			$this->db->ar_cache_exists[] = 'select';
+		}
+	}
+
 	// -------------------------------------------------------------------------
 
 	/**
@@ -3463,7 +3699,7 @@ $TODO = 'prevent un-needed joins when selecting on related keys only';
 		// add the relation for this join
 		$this->dm_related($query, $arguments, NULL, TRUE);
 
-		// For method chaining
+		// for method chaining
 		return $this;
 	}
 
@@ -3933,12 +4169,6 @@ $TODO = 'prevent un-needed joins when selecting on related keys only';
 	 */
 	protected function dm_add_relation(Array $modela, Array $modelb, $join_only = FALSE)
 	{
-		// force the selection of the current object's columns
-		if (empty($this->db->ar_select))
-		{
-			$this->db->select($this->add_table_name('*'));
-		}
-
 		// many-to-many relationship
 		if ( $modela['type'] == 'has_many' AND $modelb['type'] == 'has_many' )
 		{

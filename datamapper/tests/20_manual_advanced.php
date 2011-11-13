@@ -473,6 +473,7 @@ class DataMapper_Tests_Manual_Advanced
 		{
 			$dmtesta = new Dmtesta();
 			$dmtesta->include_related_count('dmtestb/dmteste')->get();
+			$result = $dmtesta->all_to_array( array('id', 'fk_id_A', 'data_A', 'dmtestb_dmteste_count') );
 		}
 		catch (Exception $e)
 		{
@@ -480,9 +481,27 @@ class DataMapper_Tests_Manual_Advanced
 		}
 
 		$expected_result = array(
+			array(
+				'id' => 1,
+				'fk_id_A' => 0,
+				'data_A' => 'Table A Row 1',
+				'dmtestb_dmteste_count' => '2'
+			),
+			array(
+				'id' => 2,
+				'fk_id_A' => 1,
+				'data_A' => 'Table A Row 2',
+				'dmtestb_dmteste_count' => '1',
+			),
+			array(
+				'id' => 3,
+				'fk_id_A' => 1,
+				'data_A' => 'Table A Row 3',
+				'dmtestb_dmteste_count' => '0',
+			),
 		);
 
-		$result = DataMapper_Tests::assertEqual($dmtesta->all_to_array(), $expected_result, '$model->include_related_count("dmtestb/dmteste"->get();');
+		$result = DataMapper_Tests::assertEqual($result, $expected_result, '$model->include_related_count("dmtestb/dmteste"->get();');
 	}
 
 	/*
