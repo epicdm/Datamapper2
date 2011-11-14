@@ -84,7 +84,6 @@ class DataMapper implements IteratorAggregate
 	 */
 	protected static $dm_global_config = array(
 		'prefix'					=> '',
-		'join_prefix'				=> '',
 		'error_prefix'				=> '<p>',
 		'error_suffix'				=> '</p>',
 		'model_prefix' 				=> '',
@@ -99,17 +98,19 @@ class DataMapper implements IteratorAggregate
 		'lang_file_format'			=> 'model_${model}',
 		'field_label_lang_format'	=> '${model}_${field}',
 		'auto_transaction'			=> FALSE,
-		'auto_populate_has_many'	=> FALSE,
-		'auto_populate_has_one'		=> FALSE,
 		'all_array_uses_keys'		=> FALSE,
-		'db_params'					=> FALSE,
+		'db_params'					=> NULL,
 		'cache_path'				=> FALSE,
 		'cache_expiration'			=> FALSE,
 		'extensions_path'			=> array(),
 		'extensions'				=> array(),
+		'auto_populate_has_many'	=> FALSE,
+		'auto_populate_has_one'		=> FALSE,
+		'auto_populate_belongs_to'	=> FALSE,
 		'extension_overload'		=> FALSE,
-		'cascade_delete'			=> TRUE,
 		'free_result_threshold'		=> 100,
+		'join_prefix'				=> '',
+		'cascade_delete'			=> TRUE,
 	);
 
 	/**
@@ -433,6 +434,7 @@ class DataMapper implements IteratorAggregate
 				case 'auto_transaction':
 				case 'auto_populate_has_many':
 				case 'auto_populate_has_one':
+				case 'auto_populate_belongs_to':
 				case 'all_array_uses_keys':
 				case 'cascade_delete':
 				case 'extension_overload':
@@ -616,7 +618,7 @@ class DataMapper implements IteratorAggregate
 					$object->dm_config['table'] = $object->table;
 				}
 
-				// and add prefix to table
+				// and the defined prefix to the table
 				$object->dm_config['table'] = $object->dm_config['config']['prefix'] . $object->dm_config['table'];
 
 				// store the alias for this model / table combination
@@ -746,14 +748,17 @@ class DataMapper implements IteratorAggregate
 										$relations['my_key'][] = $key;
 									}
 								}
+
 								empty($relations['my_class']) AND $relations['my_class'] = $object->dm_config['model'];
 								empty($relations['my_table']) AND $relations['my_table'] = $object->dm_config['table'];
 								empty($relations['related_class']) AND $relations['related_class'] = $relation;
 								empty($relations['related_model']) AND $relations['related_model'] = $object->dm_config['model'];
+
 								if ( empty($relations['join_table']) )
 								{
 									$relations['join_table'] = ( $relation < $relations['my_class'] ) ? plural($relation).'_'.plural($relations['my_class']) : plural($relations['my_class']).'_'.plural($relation);
 								}
+
 								if ( $rel_type == 'belongs_to' )
 								{
 									$relations['related_key'] = array();
@@ -762,6 +767,11 @@ class DataMapper implements IteratorAggregate
 								{
 									throw new DataMapper_Exception("DataMapper: missing 'related_key' in $rel_type relation '$relation' in model '".$object->dm_config['model']."'");
 								}
+
+								// copy model global settings down if needed
+								empty($relations['join_prefix']) AND $relations['join_prefix'] = $object->dm_config['config']['join_prefix'];
+								empty($relations['cascade_delete']) AND $relations['cascade_delete'] = $object->dm_config['config']['cascade_delete'];
+								empty($relations['auto_populate']) AND $relations['auto_populate'] = $object->dm_config['config']['auto_populate_'.$rel_type];
 
 								// and store it
 								$object->dm_config['relations'][$rel_type][$relation] = $relations;
@@ -998,6 +1008,7 @@ class DataMapper implements IteratorAggregate
 	 */
 	protected $dm_values = array(
 		'parent' => NULL,
+		'joins' => array(),
 		'instantiations' => array(),
 	);
 
@@ -1258,10 +1269,17 @@ class DataMapper implements IteratorAggregate
 		// special case to load names that represent related objects
 		if ( $related_object = $this->dm_find_relationship($name) )
 		{
-			// instantiate the related object
+			// instantiate the related model
 			$class = $related_object['related_class'];
 			$this->dm_current->{$name} = new $class($this, $name);
 
+			// do we need to auto_populate this related object?
+			if ( $related_object['auto_populate'] )
+			{
+				$this->dm_current->{$name}->get();
+			}
+
+			// return the new related model instance
 			return $this->dm_current->{$name};
 		}
 
@@ -1926,6 +1944,9 @@ $TODO = 'Make a decision on dealing with this or not... Version 1.x didnt';
 	 */
 	public function is_related_to($related_field, $keys = array())
 	{
+		// storage for the where clause
+		$where = array();
+
 		// is a DataMapper object passed?
 		if ( $related_field instanceOf DataMapper )
 		{
@@ -1934,7 +1955,7 @@ $TODO = 'Make a decision on dealing with this or not... Version 1.x didnt';
 			{
 				foreach ( $related_field->dm_get_config('keys') as $key => $unused )
 				{
-					$this->db->where($this->add_table_name($key), $related_field->{$key});
+					$where[$this->add_table_name($key)] = $related_field->{$key};
 				}
 			}
 
@@ -1957,14 +1978,14 @@ $TODO = 'Make a decision on dealing with this or not... Version 1.x didnt';
 				reset($keys);
 				foreach ( $relation['my_key'] as $key )
 				{
-					$this->db->where($this->add_table_name($key), current($keys));
+					$where[$this->add_table_name($key)] = current($keys);
 					next($keys);
 				}
 			}
 		}
 
 		// run the count query, and return the result
-		return ($this->{$related_field}->count() > 0);
+		return ($this->{$related_field}->where($where)->count() > 0);
 	}
 
 	// --------------------------------------------------------------------
@@ -2196,13 +2217,12 @@ $TODO = 'Make a decision on dealing with this or not... Version 1.x didnt';
 
 		// reset any select present, and add our count clause
 		$object->db->ar_select = array();
-//		$object->select('COUNT(*) AS count');
 		$object->select_func('COUNT', '*', 'count');
 
 		// add the where that determines the subquery selection
-		foreach ( $this->dm_get_config('keys') as $key => $unused )
+		foreach ( $object->dm_get_config('keys') as $key => $unused )
 		{
-			$this->db->where($this->add_table_name($key), $this->db->_protect_identifiers('${parent}.'.$key), FALSE);
+			$object->db->where($this->add_table_name($key), $object->db->_protect_identifiers('${parent}.'.$key), FALSE);
 		}
 
 		// add the subquery to the select
@@ -2252,115 +2272,19 @@ $TODO = 'Make a decision on dealing with this or not... Version 1.x didnt';
 		// start relating from the current object
 		$current = $this;
 
-		// field prefix
-		$append = '';
+		// determine the relation
+		$arguments = array($arguments);
+		$related = $this->dm_get_related($current, $arguments, $append_name);
 
-		// determine the related object: related by deep relationship objects
-		if ( is_array($arguments) )
-		{
-			while ( count($arguments) > 1 )
-			{
-				$object = array_shift($arguments);
-
-				// find out what the relation is
-				if ( ! $relation = $current->dm_find_relationship($object->dm_get_config('model')) )
-				{
-					throw new DataMapper_Exception("DataMapper: Unable to relate '{$current->dm_config['model']}' with '$related_field'");
-				}
-
-				// get the relationship definition seen from the related model
-				$other_relation = $object->dm_find_relationship($current->dm_config['model']);
-
-				// add the join to the query
-				$current->dm_add_relation($relation, $other_relation);
-
-				// augument the append name
-				$append_name AND $append .= ( empty($append) ? '' : '*') . $object->dm_get_config('model');
-
-				// make the related object the new 'current'
-				$current = $object;
-			}
-
-			$arguments = array_shift($arguments);
-		}
-
-		// determine the related object: related by deep relationship string
-		elseif ( is_string($arguments) AND strpos($arguments, '/') !== FALSE )
-		{
-			// add the 'in-between' relations, one at the time
-			while ( true )
-			{
-				// strip the first relation of the argument, and adjust the argument
-				$related_field = substr( $arguments, 0, strpos($arguments, '/') );
-				$arguments = substr( $arguments, strlen($related_field) + 1);
-
-				// find out what the relation is
-				if ( ! $relation = $current->dm_find_relationship($related_field) )
-				{
-					throw new DataMapper_Exception("DataMapper: Unable to relate '{$this->dm_config['model']}' with '$related_field'");
-				}
-
-				// instantiate the related class
-				$class = $relation['related_class'];
-				$object = new $class();
-
-				// get the relationship definition seen from the related model
-				$other_relation = $object->dm_find_relationship($current->dm_config['model']);
-
-				// add the join to the query
-				$current->dm_add_relation($relation, $other_relation);
-
-				// make the related object the new 'current'
-				$current = $object;
-
-				// augument the append name
-				$append_name AND $append .= ( empty($append) ? '' : '*') . $related_field;
-
-				// bail out if none are left, the last one is added below as normal
-				if ( strpos($arguments, '/') === FALSE )
-				{
-					break;
-				}
-
-			}
-		}
-
-		// determine the related object: related by object
-		if ( $arguments instanceOf DataMapper )
-		{
-			$object =& $arguments;
-
-			// find out what the relation is
-			if ( ! $relation = $current->dm_find_relationship($object->dm_get_config('model')) )
-			{
-				throw new DataMapper_Exception("DataMapper: Unable to relate '{$current->dm_config['model']}' with '$related_field'");
-			}
-
-			// augument the append name
-			$append_name AND $append .= ( empty($append) ? '' : '*') . $object->dm_get_config('model');
-		}
-
-		// determine the related object: relationship by name
-		else
-		{
-			// find out what the relation is
-			if ( ! $relation = $current->dm_find_relationship($arguments) )
-			{
-				throw new DataMapper_Exception("DataMapper: Unable to relate '{$current->dm_config['model']}' with '$related_field'");
-			}
-
-			$class = $relation['related_class'];
-
-			$object = new $class();
-
-			// augument the append name
-			$append_name AND $append .= ( empty($append) ? '' : '*') . $arguments;
-		}
+		// and fetch the results
+		$object = $related['object'];
+		$relation = $related['relation'];
+		$append = $related['append'];
 
 		// get the relationship definition seen from the related model
 		$other_relation = $object->dm_find_relationship($current->dm_config['model']);
 
-$TODO = 'prevent un-needed joins when selecting on related keys only';
+$TODO = 'prevent un-needed join when selecting on related keys only in a has_many';
 
 		// add the join to the query
 		$current->dm_add_relation($relation, $other_relation);
@@ -3310,6 +3234,9 @@ $TODO = 'prevent un-needed joins when selecting on related keys only';
 			// clear any stored instantiations
 			$this->dm_values['instantiations'] = array();
 
+			// clear any stored joins
+			$this->dm_values['joins'] = array();
+
 			// free large queries
 			if ( $query->num_rows() > $this->dm_config['config']['free_result_threshold'] )
 			{
@@ -3582,7 +3509,7 @@ die($TODO = $query.' type subquery is not implemented yet');
 		$search = '/'.$this->db->_escape_identifiers('(DMTA_)(\d+)').'/';
 
 		// determine the current subquery prefix
-		$replace = 'DMSQ'.(self::$subquery_counter++).'_$2';
+		$replace = $this->db->_escape_identifiers('DMSQ'.(self::$subquery_counter++).'_$2');
 
 		// make the aliases used unique for this subquery
 		$sql = preg_replace($search, $replace, $sql);
@@ -3965,40 +3892,10 @@ die($TODO = 'deal with the new keys structure');
 
 		// clear any stored object values
 		$this->dm_values['instantiations'] = array();
+		$this->dm_values['joins'] = array();
 
 		// Clear the saved iterator
 		unset($this->dm_dataset_iterator);
-	}
-
-	// --------------------------------------------------------------------
-
-	/**
-	 * used several places to temporarily override the auto_populate setting
-	 *
-	 * @ignore
-	 *
-	 * @param	string	$related	related name
-	 *
-	 * @return 	DataMapper|NULL
-	 */
-	protected function &dm_get_without_auto_populating($related)
-	{
-		// save the current settings
-		$b_many = $this->dm_config['config']['auto_populate_has_many'];
-		$b_one = $this->dm_config['config']['auto_populate_has_one'];
-
-		// disable auto population
-		$this->dm_config['config']['auto_populate_has_one'] = FALSE;
-		$this->dm_config['config']['auto_populate_has_many'] = FALSE;
-
-		// fetch the related object
-		$ret =& $this->{$related};
-
-		// and reset the autopopulate settings
-		$this->dm_config['config']['auto_populate_has_many'] = $b_many;
-		$this->dm_config['config']['auto_populate_has_one'] = $b_one;
-
-		return $ret;
 	}
 
 	// --------------------------------------------------------------------
@@ -4046,6 +3943,143 @@ die($TODO = 'deal with the new keys structure');
 	// --------------------------------------------------------------------
 
 	/**
+	 * Handles the adding the related part of a query
+	 *
+	 * @ignore
+	 *
+	 * @return	bool	success or failure
+	 */
+	public function dm_get_related(&$current, &$arguments, $append_name = TRUE)
+	{
+		// field prefix
+		$append = '';
+
+		// determine the related object: related by deep relationship objects
+		if ( is_array($arguments[0]) )
+		{
+			while ( count($arguments[0]) > 1 )
+			{
+				$object = array_shift($arguments[0]);
+
+				// find out what the relation is
+				if ( ! $relation = $current->dm_find_relationship($object->dm_get_config('model')) )
+				{
+					throw new DataMapper_Exception("DataMapper: Unable to relate '{$current->dm_config['model']}' with '$related_field'");
+				}
+
+				// get the relationship definition seen from the related model
+				$other_relation = $object->dm_find_relationship($current->dm_config['model']);
+
+				// add the join to the query
+				$current->dm_add_relation($relation, $other_relation);
+
+				// augument the append name
+				$append_name AND $append .= ( empty($append) ? '' : '*') . $object->dm_get_config('model');
+
+				// make the related object the new 'current'
+				$current = $object;
+			}
+
+			$arguments[0] = array_shift($arguments[0]);
+		}
+
+		// determine the related object: related by deep relationship string
+		elseif ( is_string($arguments[0]) AND strpos($arguments[0], '/') !== FALSE )
+		{
+			// add the 'in-between' relations, one at the time
+			while ( true )
+			{
+				// strip the first relation of the argument, and adjust the argument
+				$related_field = substr( $arguments[0], 0, strpos($arguments[0], '/') );
+				$arguments[0] = substr( $arguments[0], strlen($related_field) + 1);
+
+				// find out what the relation is
+				if ( ! $relation = $current->dm_find_relationship($related_field) )
+				{
+					throw new DataMapper_Exception("DataMapper: Unable to relate '{$this->dm_config['model']}' with '$related_field'");
+				}
+
+				// instantiate the related class
+				$class = $relation['related_class'];
+				$object = new $class();
+
+				// get the relationship definition seen from the related model
+				$other_relation = $object->dm_find_relationship($current->dm_config['model']);
+
+				// add the join to the query
+				$current->dm_add_relation($relation, $other_relation);
+
+				// augument the append name
+				$append_name AND $append .= ( empty($append) ? '' : '*') . $related_field;
+
+				// make the related object the new 'current'
+				$current = $object;
+
+				// bail out if none are left, the last one is added below as normal
+				if ( strpos($arguments[0], '/') === FALSE )
+				{
+					break;
+				}
+
+			}
+		}
+
+		// determine the related object: related by object
+		if ( $arguments[0] instanceOf DataMapper )
+		{
+			$object = array_shift($arguments);
+
+			// find out what the relation is
+			if ( ! $relation = $current->dm_find_relationship($object->dm_get_config('model')) )
+			{
+				throw new DataMapper_Exception("DataMapper: Unable to relate '{$current->dm_config['model']}' with '$related_field'");
+			}
+
+			// get the relationship definition seen from the related model
+			$other_relation = $object->dm_find_relationship($current->dm_config['model']);
+
+			// add the join to the query
+			$this->dm_add_relation($relation, $other_relation);
+
+			// augument the append name
+			$append_name AND $append .= ( empty($append) ? '' : '*') . $object->dm_get_config('model');
+		}
+
+		// determine the related object: relationship by name
+		else
+		{
+			// find out what the relation is
+			$related_field = array_shift($arguments);
+			if ( ! $relation = $current->dm_find_relationship($related_field) )
+			{
+				throw new DataMapper_Exception("DataMapper: Unable to relate '{$current->dm_config['model']}' with '$related_field'");
+			}
+
+			$class = $relation['related_class'];
+
+			$object = new $class();
+
+			// get the relationship definition seen from the related model
+			$other_relation = $object->dm_find_relationship($current->dm_config['model']);
+
+			// add the join to the query
+			$this->dm_add_relation($relation, $other_relation);
+
+			// augument the append name
+			$append_name AND $append .= ( empty($append) ? '' : '*') . ( empty($arguments) ? $related_field : reset($arguments) );
+		}
+
+		// return the related object
+		return array(
+			'object' => $object,
+			'relation' => $relation,
+			'append' => $append,
+		);
+	}
+
+	// --------------------------------------------------------------------
+
+	/**
 	 * sets the specified related query
 	 *
 	 * @ignore
@@ -4064,97 +4098,12 @@ die($TODO = 'deal with the new keys structure');
 
 		if ( ! empty($query) && ! empty($arguments) )
 		{
-			// determine the related object: related by deep relationship objects
-			if ( is_array($arguments[0]) )
-			{
-				while ( count($arguments[0]) > 1 )
-				{
-					$object = array_shift($arguments[0]);
+			// determine the relation
+			$related = $this->dm_get_related($current, $arguments);
 
-					// find out what the relation is
-					if ( ! $relation = $current->dm_find_relationship($object->dm_get_config('model')) )
-					{
-						throw new DataMapper_Exception("DataMapper: Unable to relate '{$current->dm_config['model']}' with '$related_field'");
-					}
-
-					// get the relationship definition seen from the related model
-					$other_relation = $object->dm_find_relationship($current->dm_config['model']);
-
-					// add the join to the query
-					$current->dm_add_relation($relation, $other_relation);
-
-					// make the related object the new 'current'
-					$current = $object;
-				}
-
-				$arguments[0] = array_shift($arguments[0]);
-			}
-
-			// determine the related object: related by deep relationship string
-			elseif ( is_string($arguments[0]) AND strpos($arguments[0], '/') !== FALSE )
-			{
-				// add the 'in-between' relations, one at the time
-				while ( true )
-				{
-					// strip the first relation of the argument, and adjust the argument
-					$related_field = substr( $arguments[0], 0, strpos($arguments[0], '/') );
-					$arguments[0] = substr( $arguments[0], strlen($related_field) + 1);
-
-					// find out what the relation is
-					if ( ! $relation = $current->dm_find_relationship($related_field) )
-					{
-						throw new DataMapper_Exception("DataMapper: Unable to relate '{$this->dm_config['model']}' with '$related_field'");
-					}
-
-					// instantiate the related class
-					$class = $relation['related_class'];
-					$object = new $class();
-
-					// get the relationship definition seen from the related model
-					$other_relation = $object->dm_find_relationship($current->dm_config['model']);
-
-					// add the join to the query
-					$current->dm_add_relation($relation, $other_relation);
-
-					// make the related object the new 'current'
-					$current = $object;
-
-					// bail out if none are left, the last one is added below as normal
-					if ( strpos($arguments[0], '/') === FALSE )
-					{
-						break;
-					}
-
-				}
-			}
-
-			// determine the related object: related by object
-			if ( $arguments[0] instanceOf DataMapper )
-			{
-				$object = array_shift($arguments);
-
-				// find out what the relation is
-				if ( ! $relation = $current->dm_find_relationship($object->dm_get_config('model')) )
-				{
-					throw new DataMapper_Exception("DataMapper: Unable to relate '{$current->dm_config['model']}' with '$related_field'");
-				}
-
-			}
-
-			// determine the related object: relationship by name
-			else
-			{
-				// find out what the relation is
-				$related_field = array_shift($arguments);
-				if ( ! $relation = $current->dm_find_relationship($related_field) )
-				{
-					throw new DataMapper_Exception("DataMapper: Unable to relate '{$current->dm_config['model']}' with '$related_field'");
-				}
-
-				$class = $relation['related_class'];
-
-				$object = new $class();
-			}
+			// and fetch the results
+			$object = $related['object'];
+			$relation = $related['relation'];
 
 			// no selection arguments present
 			if ( empty($arguments) )
@@ -4255,7 +4204,12 @@ $TODO = 'prevent un-needed joins when selecting on related keys only';
 			}
 
 			// join modela to the join table
-			$this->db->join($modela['join_table'].' '.$this->dm_table_alias($modela['join_table'], TRUE), $cond, 'LEFT OUTER');
+			$alias = $this->dm_table_alias($modela['join_table'], TRUE);
+			if ( ! in_array($alias, $this->dm_values['joins'] ) )
+			{
+				$this->dm_values['joins'][] = $alias;
+				$this->db->join($modela['join_table'].' '.$alias, $cond, 'LEFT OUTER');
+			}
 
 			// join modelb to the join table
 			if ( $join_only === FALSE )
@@ -4269,7 +4223,12 @@ $TODO = 'prevent un-needed joins when selecting on related keys only';
 				}
 
 				// join modela to the join table
-				$this->db->join($modelb['my_table'].' '.$this->dm_table_alias($modelb['related_model'], TRUE), $cond, 'LEFT OUTER');
+				$alias = $this->dm_table_alias($modelb['related_model'], TRUE);
+				if ( ! in_array($alias, $this->dm_values['joins'] ) )
+				{
+					$this->dm_values['joins'][] = $alias;
+					$this->db->join($modelb['my_table'].' '.$alias, $cond, 'LEFT OUTER');
+				}
 			}
 		}
 
@@ -4290,7 +4249,12 @@ $TODO = 'prevent un-needed joins when selecting on related keys only';
 			}
 
 			// join with modela
-			$this->db->join($modelb['my_table'].' '.$this->dm_table_alias($modelb['related_model'], TRUE), $cond, 'LEFT OUTER');
+			$alias = $this->dm_table_alias($modelb['related_model'], TRUE);
+			if ( ! in_array($alias, $this->dm_values['joins'] ) )
+			{
+				$this->dm_values['joins'][] = $alias;
+				$this->db->join($modelb['my_table'].' '.$alias, $cond, 'LEFT OUTER');
+			}
 		}
 
 		// one-to-many relationship, or one-to-one relationship, parent -> child
@@ -4310,7 +4274,12 @@ $TODO = 'prevent un-needed joins when selecting on related keys only';
 			}
 
 			// join with modelb
-			$this->db->join($modelb['my_table'].' '.$this->dm_table_alias($modelb['related_model'], TRUE), $cond, 'LEFT OUTER');
+			$alias = $this->dm_table_alias($modelb['related_model'], TRUE);
+			if ( ! in_array($alias, $this->dm_values['joins'] ) )
+			{
+				$this->dm_values['joins'][] = $alias;
+				$this->db->join($modelb['my_table'].' '.$alias, $cond, 'LEFT OUTER');
+			}
 		}
 
 		// incompatible combination, bail out

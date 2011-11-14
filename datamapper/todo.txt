@@ -7,12 +7,12 @@ DataMapper v2 Todo:
    - update
    - truncate
    x all internal validation functions
-   - count (and variations)
-   - pages methods
-   - func support
+   x count (and variations)
+   x pages methods
+   x func support
    - subquery support
    x related query methods
-   - include related methods
+   x include related methods
    - join field methods
    - auto populate features
 
@@ -21,7 +21,21 @@ DataMapper v2 Todo:
    - include where(delete_field IS NULL) in queries
    - NOTE: do we need an undelete?
    - NOTE: do we need to be able to selected deleted records?
+   - implement this as an extension (which overloads save/delete/get?)
+     if so, how to call the "parent", extensions onkly have internal access
 
 -> adding support for observers:
    - have them deal with created / updated
    - have them deal with soft_delete too?
+   
+-> save
+   - implement cascading save for related objects
+
+-> model relations
+   - populate the models relations with the "other side"?
+     this can be done during setup, and written to the cache file
+     it will save a lot of unneeded object instantiations just to get 
+     the relationship information from the other side of the relation
+     
+-> documentation
+   - /parent is not documented (to link to the parent object in func() subqueries

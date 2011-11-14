@@ -116,7 +116,7 @@ class DataMapper_Functions
 	 *
 	 * @return	DataMapper	returns self for method chaining
 	 */
-	public static function dm_field_func($dmobject, $query, $args)
+	public static function dm_field_func($dmobject, $query, $arguments)
 	{
 		// make sure we have enough arguments
 		if ( count($arguments) < 2 )
@@ -125,11 +125,11 @@ class DataMapper_Functions
 		}
 
 		// pop the fieldname
-		$field = array_shift($args);
+		$field = array_shift($arguments);
 
 		// create the function
 		array_unshift($arguments, $dmobject);
-		$func = call_user_func_array('self::func', $args);
+		$func = call_user_func_array('self::func', $arguments);
 
 		// deal with any where_in type queries
 		return $dmobject->dm_alter_where_in($query, $field, $func);
@@ -158,7 +158,7 @@ class DataMapper_Functions
 				else
 				{
 					// recursively process functions within functions
-					$ret .= call_user_func_array(array($this, 'func'), array_merge(array($function), (array)$formula_argument));
+					$ret .= call_user_func_array(array($dmobject, 'func'), array_merge(array($function), (array)$formula_argument));
 				}
 			}
 			return $ret;
@@ -173,20 +173,24 @@ class DataMapper_Functions
 
 		if ( is_string($argument) )
 		{
-			if ( ($is_formula AND in_array($argument, $operators)) OR
+			if ( empty($argument) )
+			{
+				$ret .= $dmobject->db->escape($argument);
+			}
+			elseif ( ($is_formula AND in_array($argument, $operators)) OR
 				 $argument == '*' OR
-				 ($argument[0] == "'" AND $argument[strlen($argument)-1] == "'") OR
-				 ($argument[0] == "[" AND $argument[strlen($argument)-1] == "]") )
+				 ($argument{0} == "'" AND $argument{strlen($argument)-1} == "'") OR
+				 ($argument{0} == "[" AND $argument{strlen($argument)-1} == "]") )
 			{
 				// simply add already-escaped strings, the special * value, or operators in formulas
-				if ( $argument[0] == "[" AND $argument[strlen($argument)-1] == "]")
+				if ( $argument{0} == "[" AND $argument{strlen($argument)-1} == "]")
 				{
 					// arguments surrounded by square brackets are added directly, minus the brackets
 					$argument = substr($argument, 1, -1);
 				}
 				$ret .= $argument;
 			}
-			elseif ( $argument[0] == '@' )
+			elseif ( $argument{0} == '@' )
 			{
 				// model or sub-model property
 				$argument = substr($argument, 1);
@@ -200,11 +204,23 @@ class DataMapper_Functions
 					}
 					else
 					{
-die($TODO='functions to deep related models');
+						// get the property name of the string
 						$rel_elements = explode('/', $argument);
+
 						$property = array_pop($rel_elements);
-						$table = $this->_add_related_table(implode('/', $rel_elements));
-						$ret .= $this->db->protect_identifiers($table . '.' . $property);
+						$rel_elements = array(implode('/', $rel_elements));
+
+						// add the related models if needed
+						$current = $dmobject;
+						$related = $dmobject->dm_get_related($current, $rel_elements);
+
+						if ( $related['object'] instanceOf DataMapper )
+						{
+							$dmobject->dm_add_relation($related['relation'], $related['object']->dm_find_relationship($dmobject->dm_get_config('model')));
+						}
+
+						// add the requested property
+						$ret .= $related['object']->add_table_name($property);
 					}
 				}
 				else

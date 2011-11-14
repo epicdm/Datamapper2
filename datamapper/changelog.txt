@@ -61,5 +61,8 @@ New related parameter supported: array of related objects:
    ( as opposed to $model->where_related( "deep/related", "field", "value")->get() )
 
 Improvement on get_iterated()
--> get_iterated() now re-uses a single object for all results, which means careful when you assign it to another variable (by reference!)
+-> get_iterated() now re-uses a single object for all results, which means careful when you assign it to another variable (by 
 
+Implicit "SELECT *":
+-> An implicit SELECT * will now only be added when no selection from the current table is made
+   this is different from v1.x, where it was added even if there was a select_func() on a table column
