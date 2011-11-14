@@ -115,11 +115,12 @@ class DataMapper_Tests_Setup
 		self::$CI->dbforge->add_field("id int(11) NOT NULL AUTO_INCREMENT");
 		self::$CI->dbforge->add_field("fk_id_B int(11) NOT NULL DEFAULT 0");
 		self::$CI->dbforge->add_field("data_E varchar(50) NOT NULL DEFAULT ''");
+		self::$CI->dbforge->add_field("flag tinyint(1) NOT NULL DEFAULT 0");
 		self::$CI->dbforge->add_key("id", TRUE);
 		self::$CI->dbforge->create_table('dmtests_E', TRUE);
 
 		// add test data to table E
-		self::$CI->db->insert('dmtests_E', array('fk_id_B' => 1, 'data_E' => 'Table E Row 1 FK B_1'));
-		self::$CI->db->insert('dmtests_E', array('fk_id_B' => 2, 'data_E' => 'Table E Row 1 FK B_2'));
+		self::$CI->db->insert('dmtests_E', array('fk_id_B' => 1, 'data_E' => 'Table E Row 1 FK B_1', 'flag' => 0));
+		self::$CI->db->insert('dmtests_E', array('fk_id_B' => 2, 'data_E' => 'Table E Row 1 FK B_2', 'flag' => 1));
 	}
 }

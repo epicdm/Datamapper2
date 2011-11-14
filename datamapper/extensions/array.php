@@ -35,6 +35,10 @@ class DataMapper_Array
 		{
 			$fields = $dmobject->dm_get_config('fields');
 		}
+		elseif ($fields === TRUE )
+		{
+			$fields = array_keys(get_object_vars($dmobject->dm_get_data()));
+		}
 		else
 		{
 			$fields = (array) $fields;

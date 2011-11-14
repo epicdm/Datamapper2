@@ -158,7 +158,6 @@ class DataMapper_Tests_Manual_Counting
 		{
 			DataMapper_Tests::failed('Exception: '.$e->getMessage());
 		}
-$dmtesta->check_last_query();
 
 		$result = DataMapper_Tests::assertEqual($result, false, '$model->is_related_to("dmtestb", array(1)); - not related');
 

@@ -1511,7 +1511,7 @@ class DataMapper implements IteratorAggregate
 
 		// check if we have selected something from the current table
 		$found = FALSE;
-		$alias = $this->db->_protect_identifiers(self::$dm_table_aliases[$this->dm_config['model']]);
+		$alias = $this->db->protect_identifiers(self::$dm_table_aliases[$this->dm_config['model']]);
 		foreach ( $this->db->ar_select as $select )
 		{
 			// filter out subqueries
@@ -1611,7 +1611,7 @@ $TODO = 'Make a decision on dealing with this or not... Version 1.x didnt';
 		{
 			// check if we have selected something from the current table
 			$found = FALSE;
-			$alias = $this->db->_protect_identifiers(self::$dm_table_aliases[$this->dm_config['model']]);
+			$alias = $this->db->protect_identifiers(self::$dm_table_aliases[$this->dm_config['model']]);
 			foreach ( $this->db->ar_select as $select )
 			{
 				// filter out subqueries
@@ -1774,7 +1774,7 @@ $TODO = 'Make a decision on dealing with this or not... Version 1.x didnt';
 		if ( count($columns) == 1 )
 		{
 			// do a COUNT DISTINCT
-			$select = 'SELECT COUNT(DISTINCT ' . $this->db->_protect_identifiers(reset($columns)) . ') AS ';
+			$select = 'SELECT COUNT(DISTINCT ' . $this->db->protect_identifiers(reset($columns)) . ') AS ';
 		}
 		else
 		{
@@ -1782,7 +1782,7 @@ $TODO = 'Make a decision on dealing with this or not... Version 1.x didnt';
 		}
 
 		// call the CI driver to compile the query
-		$sql = $this->db->dm_call_method('_compile_select', $select . $this->db->_protect_identifiers('numrows'));
+		$sql = $this->db->dm_call_method('_compile_select', $select . $this->db->protect_identifiers('numrows'));
 
 		// run the count query
 		$query = $this->db->query($sql);
@@ -2222,7 +2222,7 @@ $TODO = 'Make a decision on dealing with this or not... Version 1.x didnt';
 		// add the where that determines the subquery selection
 		foreach ( $object->dm_get_config('keys') as $key => $unused )
 		{
-			$object->db->where($this->add_table_name($key), $object->db->_protect_identifiers('${parent}.'.$key), FALSE);
+			$object->db->where($this->add_table_name($key), $object->db->protect_identifiers('${parent}.'.$key), FALSE);
 		}
 
 		// add the subquery to the select
@@ -2332,7 +2332,7 @@ $TODO = 'prevent un-needed join when selecting on related keys only in a has_man
 				}
 
 				// add the field to the selection
-				$selected[] = $current->dm_table_alias($other_relation['my_class']).'.'.$field.(empty($append_field)?'':' AS '.$this->db->_protect_identifiers($append_field));
+				$selected[] = $current->dm_table_alias($other_relation['my_class']).'.'.$field.(empty($append_field)?'':' AS '.$this->db->protect_identifiers($append_field));
 			}
 		}
 
@@ -3033,6 +3033,16 @@ $TODO = 'prevent un-needed join when selecting on related keys only in a has_man
 	// -------------------------------------------------------------------------
 
 	/**
+	 * returns the stored current data
+	 *
+	 * @return	object	DataMapper_Storage object
+	 */
+	public function dm_get_data()
+	{
+		return $this->dm_current;
+	}
+
+	/**
 	 * returns the value of a stored flag
 	 *
 	 * @param	string	$flag	name of the flag requested
@@ -3476,11 +3486,84 @@ $TODO = 'prevent un-needed join when selecting on related keys only in a has_man
 		}
 		else
 		{
-die($TODO = $query.' type subquery is not implemented yet');
+			// init some vars we need
+			$object = $field = $value = NULL;
+
+			// passed a DataMapper object or a fieldname?
+			if ( $arguments[0] instanceOf DataMapper OR ( is_string($arguments[0]) AND ! isset($arguments[1]) ) )
+			{
+				$field = $this->dm_parse_subquery_sql($arguments[0]);
+				isset($arguments[1]) AND $value = $this->db->protect_identifiers($this->add_table_name($arguments[1]));
+			}
+			else
+			{
+				$field = $this->add_table_name($arguments[0]);
+				$value = $arguments[1];
+				is_object($value) AND $value = $this->dm_parse_subquery_sql($value);
+			}
+
+			// see if there's an extra parameter present
+			$extra = isset($arguments[2]) ? $arguments[2] : NULL;
+
+			// return the altered query
+			return $this->dm_alter_where_in($query, $field, $value, $extra);
 		}
 
 		// for method chaining
 		return $this;
+	}
+
+	// --------------------------------------------------------------------
+
+	/**
+	 * @ignore
+	 *
+	 * @param	string	$query		query method
+	 * @param	object	$arguments	arguments for the query
+	 *
+	 * @return	DataMapper	returns self for method chaining
+	 */
+	protected function dm_related_subquery($query, $arguments)
+	{
+		// init some vars we need
+		$field = $value = NULL;
+
+		// if two arguments are present, it's field + object
+		if ( isset($arguments[2]) )
+		{
+			$field = $arguments[1];	// fieldname
+			$value = $arguments[2];	// related object
+		}
+
+		// else it's an object, and implies the key field
+		else
+		{
+			if ( count($this->dm_config['keys']) == 1 )
+			{
+				reset($this->dm_config['keys']);
+				$field = key($this->dm_config['keys']);
+				$value = $arguments[1];	// related object
+			}
+			else
+			{
+				throw new DataMapper_Exception("DataMapper: a related subquery without field name requires a model with a single key");
+			}
+		}
+
+		// if an object is passed, get the subquery SQL
+		if ( $value instanceOf DataMapper )
+		{
+			$value = $value->dm_parse_subquery_sql($value);
+		}
+
+		// deal with the "where_in" special
+		if ( strpos($query, 'where_in') !== FALSE )
+		{
+			$query = str_replace('_in', '', $query);
+			$field .= ' IN ';
+		}
+
+		return $this->dm_related($query, array($arguments[0], $field, $value), FALSE);
 	}
 
 	// -------------------------------------------------------------------------
@@ -4307,7 +4390,7 @@ $TODO = 'cache this somehow, it is rediculous to query for it every time!';
 			// add the other fields to the query
 			foreach ( $fields as $key => $field )
 			{
-				$this->db->select($this->dm_table_alias($modela['join_table']).'.'.$field->name.' AS '.$this->db->_protect_identifiers('join_'.$field->name));
+				$this->db->select($this->dm_table_alias($modela['join_table']).'.'.$field->name.' AS '.$this->db->protect_identifiers('join_'.$field->name));
 			}
 
 			// reset the flag
