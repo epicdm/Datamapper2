@@ -18,16 +18,6 @@
 // -------------------------------------------------------------------------
 
 /**
- * DataMapper version
- */
-define('DATAMAPPER_VERSION', '2.0.0');
-
-/**
- * shortcut for the directory separator
- */
-! defined('DS') AND define('DS', DIRECTORY_SEPARATOR);
-
-/**
  * enable exceptions if not already set
  */
 ! defined('DATAMAPPER_EXCEPTIONS') AND define('DATAMAPPER_EXCEPTIONS', TRUE);
@@ -39,7 +29,25 @@ define('DATAMAPPER_VERSION', '2.0.0');
 class DataMapper implements IteratorAggregate
 {
 	// -------------------------------------------------------------------------
-	// Static class definition
+	// class constants
+	// -------------------------------------------------------------------------
+
+	/**
+	 * DataMapper version
+	 *
+	 * @var	string
+	 */
+	const VERSION = '2.0.0';
+
+	/**
+	 * shortcut for the directory separator
+	 *
+	 * @var	string
+	 */
+	const DS = DIRECTORY_SEPARATOR;
+
+	// -------------------------------------------------------------------------
+	// static class definition
 	// -------------------------------------------------------------------------
 
 	/**
@@ -135,8 +143,11 @@ class DataMapper implements IteratorAggregate
 		'all_to_single_array'    => 'DataMapper_Array',
 
 		// core extension: csv methods
-		'csv_export'               => 'DataMapper_Csv',
-		'csv_import'               => 'DataMapper_Csv',
+		'csv_export'             => 'DataMapper_Csv',
+		'csv_import'             => 'DataMapper_Csv',
+
+		// core extension: debug methods
+		'check_last_query'       => 'DataMapper_Debug',
 
 		// core extension: json methods
 		'from_json'              => 'DataMapper_Json',
@@ -235,7 +246,7 @@ class DataMapper implements IteratorAggregate
 		{
 			foreach ( DataMapper::$dm_extension_paths as $path )
 			{
-				$file = $path . DS . substr($class,11) . EXT;
+				$file = $path . self::DS . substr($class,11) . EXT;
 				if ( file_exists($file) )
 				{
 					require_once($file);
@@ -253,7 +264,7 @@ class DataMapper implements IteratorAggregate
 			foreach ( $paths as $path )
 			{
 				// prepare file
-				$file = $path . 'models' . DS . $class . EXT;
+				$file = $path . 'models' . self::DS . $class . EXT;
 
 				// Check if file exists, require_once if it does
 				if ( file_exists($file) )
@@ -341,7 +352,7 @@ class DataMapper implements IteratorAggregate
 
 		foreach($paths as $path)
 		{
-			$path = realpath(rtrim($path, DS) . DS);
+			$path = realpath(rtrim($path, self::DS) . self::DS);
 			if ( $path AND is_dir($path.'models') AND ! in_array($path, DataMapper::$dm_model_paths))
 			{
 				DataMapper::$dm_model_paths[] = $path;
@@ -365,7 +376,7 @@ class DataMapper implements IteratorAggregate
 		foreach($paths as $path)
 		{
 			// check if the path exists
-			$path = realpath(rtrim($path, DS) . DS);
+			$path = realpath(rtrim($path, self::DS) . self::DS);
 			if ( is_dir($path) )
 			{
 				// if it's present, remove it
@@ -476,7 +487,7 @@ class DataMapper implements IteratorAggregate
 						{
 							throw new DataMapper_Exception("DataMapper: Error in the '$context' configuration => item '$name' must be writeable");
 						}
-						$config[$name] = realpath($value) . DS;
+						$config[$name] = realpath($value) . self::DS;
 					}
 					break;
 
@@ -932,7 +943,7 @@ class DataMapper implements IteratorAggregate
 		$idiom = ($default_lang == '' OR $default_lang == 'english') ? 'en' : $default_lang;
 
 		// check if this language file exists, we can't catch CI's lang load errors
-		$file = realpath(DataMapper::$dm_path.DS.'language'.DS.$idiom.DS.$lang.'_lang'.EXT);
+		$file = realpath(DataMapper::$dm_path.self::DS.'language'.self::DS.$idiom.self::DS.$lang.'_lang'.EXT);
 		if ( $file AND is_file($file) )
 		{
 			DataMapper::$CI->lang->load('datamapper', $idiom);
@@ -1076,7 +1087,7 @@ class DataMapper implements IteratorAggregate
 			DataMapper::$dm_path = __DIR__;
 
 			// store the path to the DataMapper extension files
-			DataMapper::$dm_extension_paths = array(realpath(__DIR__.DS.'..'.DS.'core'), realpath(__DIR__.DS.'..'.DS.'extensions'));
+			DataMapper::$dm_extension_paths = array(realpath(__DIR__.self::DS.'..'.self::DS.'core'), realpath(__DIR__.self::DS.'..'.self::DS.'extensions'));
 
 			// load the global config
 			DataMapper::$CI->config->load('datamapper', TRUE, TRUE);
@@ -2964,30 +2975,6 @@ $TODO = 'prevent un-needed join when selecting on related keys only in a has_man
 	// --------------------------------------------------------------------
 
 	/**
-	 * renders the last DB query performed
-	 *
-	 * @param	array	$delims				delimiters for the SQL string
-	 * @param	bool	$return_as_string	if TRUE, don't output automatically
-	 *
-	 * @return	string	last db query formatted as a string
-	 */
-	public function check_last_query($delims = array('<hr /><pre>', '</pre><hr />'), $return_as_string = FALSE)
-	{
-		$q = wordwrap($this->db->last_query(), 100, "\n\t");
-		if ( ! empty($delims) )
-		{
-			$q = implode($q, $delims);
-		}
-		if ( $return_as_string === FALSE )
-		{
-			echo $q;
-		}
-		return $q;
-	}
-
-	// --------------------------------------------------------------------
-
-	/**
 	 * returns a clone of the current object
 	 *
 	 * @return	DataMapper	cloned copy of this object
@@ -3020,7 +3007,7 @@ $TODO = 'prevent un-needed join when selecting on related keys only in a has_man
 		$copy = $this->get_clone($force_db);
 
 		// reset the keys to make it new
-		foreach ( $dm_config['keys'] as $key => $type )
+		foreach ( $copy->dm_get_config('keys') as $key => $unused )
 		{
 			$copy->dm_current->{$key} = NULL;
 		}

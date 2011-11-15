@@ -10,7 +10,7 @@ general:
    CI is accessed via the DataMapper::$CI object (do not use get_instance() !)
 -> datamapper now allows base classes for DataMapper models ( class ModelA extends ModelB extends ModelC extends DataMapper )
    it is also possible to extend Datamapper using a MY_Datamapper library, but it is preferred to use base models
--> constant DMZ_VERSION is now called DATAMAPPER_VERSION
+-> constant DMZ_VERSION is now called DataMapper::VERSION, a class constant
 -> model object data properties are case-insensitive, $object->THIS is identical to $object->this !
 -> model cache files now have an configurable expiry time
 
