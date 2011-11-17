@@ -767,7 +767,7 @@ class DataMapper implements IteratorAggregate
 
 								if ( empty($relations['join_table']) )
 								{
-									$relations['join_table'] = ( $relation < $relations['my_class'] ) ? plural($relation).'_'.plural($relations['my_class']) : plural($relations['my_class']).'_'.plural($relation);
+									$relations['join_table'] = $object->dm_config['config']['prefix'] . ( $relation < $relations['my_class'] ) ? plural($relation).'_'.plural($relations['my_class']) : plural($relations['my_class']).'_'.plural($relation);
 								}
 
 								if ( $rel_type == 'belongs_to' )
@@ -1845,16 +1845,20 @@ $TODO = 'Make a decision on dealing with this or not... Version 1.x didnt';
 	/**
 	 * clears the current object
 	 *
+	 * @param	bool	$values			if TRUE, clears all stored values for this object
+	 *
 	 * @return	DataMapper	returns self for method chaining
 	 */
-	public function clear()
+	public function clear($values = FALSE)
 	{
 		// clear the all list
 		$this->all = array();
 
 		// clear errors
-
 		$this->error->clear();
+
+		// clear the saved iterator
+		$this->dm_dataset_iterator = NULL;
 
 		// clear this objects properties
 		foreach ($this->dm_config['fields'] as $field)
@@ -1877,10 +1881,18 @@ $TODO = 'Make a decision on dealing with this or not... Version 1.x didnt';
 		// clear and refresh stored values
 		$this->dm_original = new DataMapper_Datastorage();
 
-		// clear the saved iterator
-		$this->dm_dataset_iterator = NULL;
-
+		// mark any updated field values as original
 		$this->dm_refresh_original_values();
+
+		// clear the objects value store if needed
+		if ( $values === TRUE )
+		{
+			$this->dm_values = array(
+				'parent' => NULL,
+				'joins' => array(),
+				'instantiations' => array(),
+			);
+		}
 
 		// For method chaining
 		return $this;
