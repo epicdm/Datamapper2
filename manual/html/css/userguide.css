@@ -39,30 +39,6 @@ a.def:hover {
     color: #0134c5;
 }
 
-#googleSearchBox:focus {
-    background-color: #FFF9D1;
-    border-color: Black;
-}
-
-#breadcrumb {
-    float: left;
-    background-color: transparent;
-    margin: 10px 0 0 42px;
-    padding: 0;
-    font-size: 10px;
-    color: #666;
-}
-
-#breadcrumb_right {
-    float: right;
-    width: 175px;
-    background-color: transparent;
-    padding: 8px 8px 3px 0;
-    text-align: right;
-    font-size: 10px;
-    color: #666;
-}
-
 #nav {
     background-color: #494949;
     margin: 0;
@@ -153,12 +129,48 @@ a.def:hover {
     padding: 0 0 6px 0;
 }
 
-#searchbox {
+#breadcrumb {
+    float: left;
     background-color: transparent;
-    padding: 6px 40px 0 0;
+    margin: 10px 0 0 42px;
+    padding: 5px 0 0 0;
+    font-size: 10px;
+    color: #666;
+}
+
+#breadcrumb_right {
+    float: right;
+    width: 175px;
+    background-color: transparent;
+    padding: 8px 8px 3px 0;
     text-align: right;
     font-size: 10px;
     color: #666;
+}
+
+#paypal {
+    width: 1%;
+    white-space: nowrap;
+    padding: 0 40px 0 0;
+}
+
+#paypal input {
+    margin-top: 10px;
+}
+
+#searchbox {
+    background-color: transparent;
+    padding: 6px 30px 0 0;
+    text-align: right;
+    font-size: 10px;
+    color: #666;
+    width: 1%;
+    white-space: nowrap;
+}
+
+#googleSearchBox:focus {
+    background-color: #FFF9D1;
+    border-color: Black;
 }
 
 #img_welcome {
@@ -169,7 +181,7 @@ a.def:hover {
 }
 
 #content {
-    margin: 20px 40px 0 40px;
+    margin: 10px 40px 0 40px;
     padding: 0;
 }
 
@@ -186,6 +198,7 @@ a.def:hover {
     margin: 0 0 20px 0;
     padding: 3px 0 7px 3px;
 }
+
 
 #mainlogo {
     border-bottom: none;
@@ -225,16 +238,6 @@ a.def:hover {
     padding: 0;
 }
 
-#content tt,
-#content pre,
-#content pre var,
-#content pre kbd,
-#content pre samp,
-#content pre dfn {
-    font-family: Consolas, Monaco, Lucida Console, Lucida Sans Typewriter, Courier, Courier New, Sans-serif !important;
-    font-weight: normal;
-}
-
 #content pre .new {
     font-style: normal;
     background: #DFF4FF;
@@ -255,6 +258,7 @@ a.def:hover {
 }
 
 #content li {
+    margin-left: -10px;
     margin-bottom: 9px;
 }
 #content table.contributors {
@@ -322,14 +326,14 @@ a.def:hover {
     background: #FFF9D1;
     border: 1px solid #D8A969;
     color: #333;
-    margin: 10px 0 5px 0;
+    margin: 20px 0 10px 0;
     padding: 10px;
 	overflow: auto;
 }
 #content .note strong em {
-	font-weight: bold;
-	color: #b27140;
-	font-style: normal;
+    font-weight: bold;
+    color: #b27140;
+    font-style: normal;
 }
 
 #content div.highlight,
@@ -340,6 +344,11 @@ a.def:hover {
     margin: 10px 0 5px 0;
     padding: 10px;
 	overflow: auto;
+}
+
+#content em {
+    color: #e13300;
+    font-style: normal;
 }
 
 #content div.highlight pre,

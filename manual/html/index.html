@@ -4,8 +4,6 @@
 	<head>
 
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-		<meta http-equiv="Refresh" content="0; url=./pages/index.html" />
-
 
 		<title>WanWizard - DataMapper ORM v2.0 - User Guide</title>
 
@@ -39,16 +37,77 @@
 		<!-- START BREADCRUMB -->
 		<table cellpadding="0" cellspacing="0" border="0" style="width:100%">
 			<tr>
-			<td id="breadcrumb"><a href="./">Datamapper ORM Home</a></td>
+				<td id="breadcrumb"><a href="./">Datamapper ORM Home</a></td>
 			</tr>
 		</table>
+		<div>
+		</div>
+
 		<!-- END BREADCRUMB -->
 
 		<br clear="all" />
 
 		<!-- START CONTENT -->
-		<div id="content" style="text-align:center;padding:150px 0 125px 0;">
-			<h1 style="border:none;">Click <a href="./pages/index.html">here</a> to load the DataMapper ORM v2.0 User Guide</h1>
+		<div id="content">
+			<h1 id="mainlogo">
+				<img src="./images/datamapperlogo.png" border="0" alt="DataMapper ORM" />
+				<img src="./images/datamapper.png" border="0" alt="DataMapper ORM" />
+			</h1>
+			<p>
+				DataMapper ORM is an <a href="http://en.wikipedia.org/wiki/Object-relational_mapping">Object Relational Mapper</a>, implementing
+				the <a href="http://en.wikipedia.org/wiki/Active_record_pattern">Active Record Pattern</a>, and
+				written in <a href="http://php.net/">PHP</a> for the <a href="http://codeigniter.com/">CodeIgniter</a> PHP Framework.
+				It is designed to map your Database tables into easy to work with objects, fully aware of the relationships between each other.
+			</p>
+			<p>
+				DataMapper ORM v2.0 supports CodeIgniter Core and Reactor v2.0 and above.
+			</p>
+
+			<h2>General Features</h2>
+
+			<ul>
+				<li>Everything is an object!</li>
+				<li>Easy to setup, easy to use.</li>
+				<li>Custom <a href="pages/validation.html">Validation</a> on object properties.</li>
+				<li><a class="def" href="pages/glossary.html#Lazy.Loading">Lazy Loading</a> (related objects are only loaded upon access).</li>
+				<li>Relations and their integrity are automatically managed for you.</li>
+				<li><a class="def" href="pages/glossary.html#One.to.One">One to One</a>, <a class="def" href="pages/glossary.html#One.to.Many">One to Many</a>, and <a class="def" href="pages/glossary.html#Many.to.Many">Many to Many</a> relations fully supported.</li>
+				<li>Select data in the style of CodeIgniters Query Builder (<a href="http://codeigniter.com/user_guide/database/active_record.html">Active Record</a>), with or without <a class="def" href="pages/glossary.html#Method.Chaining">Method Chaining</a>.</li>
+			</ul>
+
+			<h3>New to DataMapper ORM?</h3>
+
+			<p>
+				If you are new to Datamapper ORM, <a href="pages/requirements.html">please start here</a> to get Datamapper ORM running on your server.
+				Then follow along with the <strong>Next Topic</strong> links at the bottom of each page.
+			</p>
+
+			<h3>Want to upgrade?</h3>
+
+			<p>
+				If you are an existing Datamapper ORM user, you might want to read the <a href="pages/changelog.html">changelog</a> before upgrading, as version 2.0 is <strong>NOT</strong> a drop-in replacement for version 1.x.
+				When you are familiar with the changes, continue with the <a href="pages/upgrade.html">upgrade instructions</a> to see what needs to be changed to your application to be able to use version 2.0.
+			</p>
+
+			<p class="note">
+				Note: Datamapper ORM is also available as a <strong><em>CI Spark</em></strong>: check out the cool way of extending CodeIgniter
+				at <a href="http://getsparks.org/packages/DataMapper-ORM/versions/HEAD/show">getsparks.org</a>!
+			</p>
+
+			<h2>Support DataMapper</h2>
+
+			<p>
+				If you use DataMapper in your applications, please consider <em>donating</em> to support the ongoing development, maintenance and support of DataMapper.
+				Any amount is highly appreciated. You can donate via <em>PayPal</em> using the button in the upper-right corner of the page.
+			</p>
+
+			<h2>Custom Development</h2>
+
+			<p>
+				Are you looking for some custom development for DataMapper? Do you need an experienced PHP developer that knows both
+				DataMapper and CodeIgniter inside and out to help you build your application? Please contact <span id="rot13"><b>JavaScript must be enabled to see my email.</b></span> for details.
+			</p>
+
 		</div>
 		<!-- END CONTENT -->
 
@@ -56,7 +115,7 @@
 		<div id="footer">
 			<p><a href="#top">Top of Page</a></p>
 			<div id="copyrights">
-				<p><a href="http://datamapper.wanwizard.eu/pages/index.html">Datamapper ORM v2.0</a> &nbsp;&middot;&nbsp; Copyright &copy; 2010-2011 &nbsp;&middot;&nbsp; <a href="http://wanwizard.eu">Harro "WanWizard" Verton</a></p>
+				<p><a href="http://datamapper.wanwizard.eu/pages/index.html">Datamapper ORM</a> &nbsp;&middot;&nbsp; Copyright &copy; 2010-2011 &nbsp;&middot;&nbsp; <a href="http://wanwizard.eu">WanWizard Web Development</a></p>
 				<p><a href="./pages/license.html">Other License Information</a></p>
 			</div>
 		</div>
@@ -65,6 +124,7 @@
 		<!-- START SCRIPTS -->
 		<script type="text/javascript" src="./js/mootools.js"></script>
 		<script type="text/javascript" src="./js/menu.js"></script>
+		<script type="text/javascript" src="./js/rot13.js"></script>
 		<script type="text/javascript">
 			<!--
 				window.addEvent('domready', function() {
@@ -76,6 +136,10 @@
 					});
 
 				});
+
+				// Create ROT13
+				var rot = new ROT13();
+				$('rot13').set('html', rot.convert('<n uers="znvygb:qngnznccre@jnajvmneq.rh">JnaJvmneq Jro Qrirybczrag</n>'));
 			//-->
 		</script>
 		<!-- END SCRIPTS -->

@@ -25,7 +25,7 @@
 		<div id="footer">
 			<p><a href="#top">Top of Page</a></p>
 			<div id="copyrights">
-				<p><a href="http://datamapper.wanwizard.eu/pages/index.html">Datamapper ORM v2.0</a> &nbsp;&middot;&nbsp; Copyright &copy; 2010-<?php echo date('Y'); ?> &nbsp;&middot;&nbsp; <a href="http://wanwizard.eu">Harro "WanWizard" Verton</a></p>
+				<p><a href="http://datamapper.wanwizard.eu/pages/index.html">Datamapper ORM </a> &nbsp;&middot;&nbsp; Copyright &copy; 2010-<?php echo date("Y");?> &nbsp;&middot;&nbsp; <a href="http://wanwizard.eu">WanWizard Web Development</a></p>
 				<p><a href="<?php echo $vars['rootdir']; ?>/pages/license.html">Other License Information</a></p>
 			</div>
 		</div>
@@ -34,6 +34,7 @@
 		<!-- START SCRIPTS -->
 		<script type="text/javascript" src="<?php echo $vars['rootdir']; ?>/js/mootools.js"></script>
 		<script type="text/javascript" src="<?php echo $vars['rootdir']; ?>/js/menu.js"></script>
+		<script type="text/javascript" src="<?php echo $vars['rootdir']; ?>/js/rot13.js"></script>
 		<script type="text/javascript">
 			<!--
 				window.addEvent('domready', function() {
