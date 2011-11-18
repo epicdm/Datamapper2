@@ -16,6 +16,7 @@
 $dmclass = <<<CODE
 class DM_DB_Driver extends $driver
 {
+	// public interface to internal driver methods
 	public function dm_call_method(\$function, \$p1 = null, \$p2 = null, \$p3 = null, \$p4 = null)
 	{
 		switch (func_num_args())
@@ -35,6 +36,22 @@ class DM_DB_Driver extends $driver
 				return \$this->{\$function}(\$p1, \$p2, \$p3, \$p4);
 				break;
 		}
+	}
+
+	// public interface to internal driver properties
+	public function dm_get(\$var)
+	{
+		return isset(\$this->{\$var}) ? \$this->{\$var} : NULL;
+	}
+
+	public function dm_set(\$var, \$value)
+	{
+		\$this->{\$var} = \$value;
+	}
+
+	public function dm_set_append(\$var, \$value)
+	{
+		\$this->{\$var}[] = \$value;
 	}
 }
 CODE;

@@ -82,6 +82,8 @@ class DataMapper_Tests
 		// load the datamapper library
 		self::$CI->load->library('datamapper');
 
+		self::success('Unit Tests for DataMapper v'.DataMapper::VERSION.', Running on CodeIgniter '.((defined('CI_CORE') AND CI_CORE)?' Core':'').' v'.CI_VERSION, 1);
+
 		// benchmark
 		self::$CI->benchmark->mark('datamapper_tests_setup_start');
 

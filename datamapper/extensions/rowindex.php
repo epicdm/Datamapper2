@@ -95,19 +95,19 @@ class DataMapper_Rowindex
 		$object = $dmobject->get_clone(TRUE);
 
 		// remove the unecessary columns
-		$sort_columns = self::orderlist($object->db->ar_orderby);
+		$sort_columns = self::orderlist($object->db->dm_get('ar_orderby'));
 		$ar_select = array();
 
 		if ( empty($sort_columns) AND empty($leave_select) )
 		{
 			// no sort columns, so just wipe it out
-			$object->db->ar_select = NULL;
+			$object->db->dm_set('ar_select', NULL);
 		}
 		else
 		{
 			// loop through the ar_select, and remove columns that
 			// are not specified by sorting
-			$select = self::splitselect(implode(', ', $object->db->ar_select));
+			$select = self::splitselect(implode(', ', $object->db->dm_get('ar_select')));
 
 			// find all aliases (they are all we care about)
 			foreach ( $select as $alias => $sel )
@@ -117,7 +117,7 @@ class DataMapper_Rowindex
 					$ar_select[] = $sel;
 				}
 			}
-			$object->db->ar_select = NULL;
+			$object->db->dm_set('ar_select', NULL);
 		}
 
 		// get the list of key fields
@@ -133,7 +133,7 @@ class DataMapper_Rowindex
 		if ( $distinct_on )
 		{
 			// to ensure unique items we must DISTINCT ON the same list as the ORDER BY list.
-			$distinct = 'DISTINCT ON (' . preg_replace("/\s+(asc|desc)/i", "", implode(",", $object->db->ar_orderby)) . ') ';
+			$distinct = 'DISTINCT ON (' . preg_replace("/\s+(asc|desc)/i", "", implode(",", $object->db->dm_get('ar_orderby'))) . ') ';
 
 			// add in the DISTINCT ON and the $table.$keys columns.  The FALSE prevents the items from being escaped
 			$object->select($distinct . $keys, FALSE);
@@ -145,7 +145,7 @@ class DataMapper_Rowindex
 		}
 
 		// this ensures that the DISTINCT ON is first, since it must be
-		$object->db->ar_select = array_merge($object->db->ar_select, $ar_select);
+		$object->db->dm_set('ar_select', array_merge($object->db->dm_get('ar_select'), $ar_select));
 
 		// run the query
 		$query = $object->get_raw();

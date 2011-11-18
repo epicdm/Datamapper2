@@ -1075,26 +1075,26 @@ class DataMapper implements IteratorAggregate
 		// when first called, initialize DataMapper itself
 		if ( ! DataMapper::$dm_initialized )
 		{
-			// make sure CI is up to spec
-			if ( version_compare(CI_VERSION, '2.0.0') < 0 )
-			{
-				throw new DataMapper_Exception("DataMapper: this version only works on CodeIgniter v2.0.0 and above");
-			}
-
 			// get the CodeIgniter "superobject"
 			DataMapper::$CI = get_instance();
-
-			// check if we're bootstrapped properly
-			if ( get_class(DataMapper::$CI->load) != 'DM_Loader' )
-			{
-				throw new DataMapper_Exception("DataMapper: bootstrap is not loaded in your index.php file");
-			}
 
 			// store the path to the DataMapper installation
 			DataMapper::$dm_path = __DIR__;
 
 			// store the path to the DataMapper extension files
 			DataMapper::$dm_extension_paths = array(realpath(__DIR__.self::DS.'..'.self::DS.'core'), realpath(__DIR__.self::DS.'..'.self::DS.'extensions'));
+
+			// make sure CI is up to spec
+			if ( version_compare(CI_VERSION, '2.0.3') < 0 )
+			{
+				throw new DataMapper_Exception("DataMapper: this DataMapper version requires CodeIgniter v2.0.3 or newer");
+			}
+
+			// check if we're bootstrapped properly
+			if ( get_class(DataMapper::$CI->load) != 'DM_Loader' )
+			{
+				throw new DataMapper_Exception("DataMapper: bootstrap is not loaded in your index.php file");
+			}
 
 			// load the global config
 			DataMapper::$CI->config->load('datamapper', TRUE, TRUE);
@@ -1530,7 +1530,7 @@ class DataMapper implements IteratorAggregate
 		// check if we have selected something from the current table
 		$found = FALSE;
 		$alias = $this->db->protect_identifiers(self::$dm_table_aliases[$this->dm_config['model']]);
-		foreach ( $this->db->ar_select as $select )
+		foreach ( $this->db->dm_get('ar_select') as $select )
 		{
 			// filter out subqueries
 			if ( strpos($select, '(SELECT') !== 0 )
@@ -1630,7 +1630,7 @@ $TODO = 'Make a decision on dealing with this or not... Version 1.x didnt';
 			// check if we have selected something from the current table
 			$found = FALSE;
 			$alias = $this->db->protect_identifiers(self::$dm_table_aliases[$this->dm_config['model']]);
-			foreach ( $this->db->ar_select as $select )
+			foreach ( $this->db->dm_get('ar_select') as $select )
 			{
 				// filter out subqueries
 				if ( strpos($select, '(SELECT') !== 0 )
@@ -2246,7 +2246,7 @@ $TODO = 'Make a decision on dealing with this or not... Version 1.x didnt';
 		$object->dm_add_relation($relation, $other_relation);
 
 		// reset any select present, and add our count clause
-		$object->db->ar_select = array();
+		$object->db->dm_set('ar_select', array());
 		$object->select_func('COUNT', '*', 'count');
 
 		// add the where that determines the subquery selection
@@ -2393,13 +2393,13 @@ $TODO = 'prevent un-needed join when selecting on related keys only in a has_man
 
 		$this->dm_flags['where_group_started'] = TRUE;
 
-		$prefix = (count($this->db->ar_where) == 0 AND count($this->db->ar_cache_where) == 0) ? '' : $type;
+		$prefix = (count($this->db->dm_get('ar_where')) == 0 AND count($this->db->dm_get('ar_cache_where')) == 0) ? '' : $type;
 
 		$value =  $prefix . $not . str_repeat(' ', $this->dm_flags['group_count']) . ' (';
-		$this->db->ar_where[] = $value;
-		if ( $this->db->ar_caching )
+		$this->db->dm_set_append('ar_where', $value);
+		if ( $this->db->dm_get('ar_caching') )
 		{
-			$this->db->ar_cache_where[] = $value;
+			$this->db->dm_set_append('ar_cache_where', $value);
 		}
 
 		// for method chaining
@@ -2451,15 +2451,18 @@ $TODO = 'prevent un-needed join when selecting on related keys only in a has_man
 	 */
 	public function group_end()
 	{
+		$ar_where = $this->db->dm_get('ar_where');
+		$ar_cache_where = $this->db->dm_get('ar_cache_where');
+
 		// check for an empty group
-		$last = end($this->db->ar_where);
+		$last = end($ar_where);
 		if ( substr($last, -1) == '(' )
 		{
 			// remove it
-			array_pop($this->db->ar_where);
-			if ( $this->db->ar_caching )
+			array_pop($ar_where);
+			if ( $this->db->dm_get('ar_caching') )
 			{
-				array_pop($this->db->ar_cache_where);
+				array_pop($ar_cache_where);
 			}
 		}
 		else
@@ -2467,14 +2470,17 @@ $TODO = 'prevent un-needed join when selecting on related keys only in a has_man
 			// close the current group
 			$value = str_repeat(' ', $this->dm_flags['group_count']) . ')';
 
-			$this->db->ar_where[] = $value;
-			if ( $this->db->ar_caching )
+			$ar_where[] = $value;
+			if ( $this->db->dm_get('ar_caching') )
 			{
-				$this->db->ar_cache_where[] = $value;
+				$ar_cache_where[] = $value;
 			}
 		}
 
 		$this->dm_flags['where_group_started'] = FALSE;
+
+		$this->db->dm_set('ar_where', $ar_where);
+		$this->db->dm_set('ar_cache_where', $ar_cache_where);
 
 		// for method chaining
 		return $this;
@@ -3620,12 +3626,12 @@ $TODO = 'prevent un-needed join when selecting on related keys only in a has_man
 	protected function dm_manual_select($value)
 	{
 		// note: copied from system/database/DB_activerecord.php
-		$this->db->ar_select[] = $value;
+		$this->db->dm_set_append('ar_select', $value);
 
-		if ($this->db->ar_caching === TRUE)
+		if ($this->db->dm_get('ar_caching') === TRUE)
 		{
-			$this->db->ar_cache_select[] = $value;
-			$this->db->ar_cache_exists[] = 'select';
+			$this->db->dm_set_append('ar_cache_select', $value);
+			$this->db->dm_set_append('ar_cache_exists', 'select');
 		}
 	}
 
@@ -3722,12 +3728,15 @@ $TODO = 'prevent un-needed join when selecting on related keys only in a has_man
 
 			// only add the items if there isn't an existing order_by,
 			// AND the select statement is empty or includes * or table.* or `table`.*
-			if ( empty($this->db->ar_orderby) AND
+			$ar_order_by = $this->db->dm_get('ar_orderby');
+			$ar_select = $this->db->dm_get('ar_select');
+
+			if ( empty($ar_order_by) AND
 				(
-					empty($this->db->ar_select) OR
-					in_array('*', $this->db->ar_select) OR
-					in_array($sel_protect, $this->db->ar_select) OR
-					in_array($sel, $this->db->ar_select)
+					empty($ar_select) OR
+					in_array('*', $ar_select) OR
+					in_array($sel_protect, $ar_select) OR
+					in_array($sel, $ar_select)
 
 				))
 			{
@@ -4013,10 +4022,12 @@ die($TODO = 'deal with the new keys structure');
 				}
 			}
 			// to ensure result integrity, group all previous queries if needed
-			if ( ! empty($this->db->ar_where) AND $this->db->ar_where[0] != '( ' )
+			$ar_where = $this->db->dm_get('ar_where');
+			if ( ! empty($ar_where) AND $ar_where[0] != '( ' )
 			{
-				array_unshift($this->db->ar_where, '( ');
-				$this->db->ar_where[] = ' )';
+				array_unshift($ar_where, '( ');
+				$ar_where[] = ' )';
+				$this->db->dm_set('ar_where', $ar_where);
 			}
 
 			// add the related table selection to the query

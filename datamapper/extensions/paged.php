@@ -46,9 +46,9 @@ class DataMapper_Paged
 
 		// for performance, we clear out the select AND the order by statements,
 		// since they aren't necessary and might slow down the query.
-		$count_query->db->ar_select = NULL;
-		$count_query->db->ar_orderby = NULL;
-		$total = $count_query->db->ar_distinct ? $count_query->count_distinct() : $count_query->count();
+		$count_query->db->dm_set('ar_select', NULL);
+		$count_query->db->dm_set('ar_orderby', NULL);
+		$total = $count_query->db->dm_get('ar_distinct') ? $count_query->count_distinct() : $count_query->count();
 
 		// common vars
 		$last_row = $page_size * floor($total / $page_size);
