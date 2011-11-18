@@ -118,6 +118,7 @@ class DataMapper implements IteratorAggregate
 		'extension_overload'		=> FALSE,
 		'free_result_threshold'		=> 100,
 		'join_prefix'				=> '',
+		'cascade_save'				=> FALSE,
 		'cascade_delete'			=> TRUE,
 	);
 
@@ -159,11 +160,11 @@ class DataMapper implements IteratorAggregate
 		'get_cached'             => 'DataMapper_Simplecache',
 		'clear_cache'            => 'DataMapper_Simplecache',
 
-		// core extension: cache methods
+		// core extension: row index methods
 		'row_index'              => 'DataMapper_Rowindex',
 		'row_indices'            => 'DataMapper_Rowindex',
 
-		// core extension: function methods
+		// core extension: SQL function methods
 		'func'                   => 'DataMapper_Functions',
 		'dm_func'                => 'DataMapper_Functions',
 		'dm_field_func'          => 'DataMapper_Functions',
@@ -186,6 +187,9 @@ class DataMapper implements IteratorAggregate
 
 		// core extension: translate methods
 		'translate'              => 'DataMapper_Translate',
+
+		// core extension: UUID methods
+		'uuid'                   => 'DataMapper_Uuid',
 
 		// core extension: validation methods
 		'validate'               => 'DataMapper_Validation',
@@ -259,7 +263,7 @@ class DataMapper implements IteratorAggregate
 		if ( ! class_exists($class) )
 		{
 			// prepare the possible model paths
-			$paths = array_merge( DataMapper::$CI->load->get_package_paths(false), DataMapper::$dm_model_paths );
+			$paths = array_merge( DataMapper::$CI->load->get_package_paths(FALSE), DataMapper::$dm_model_paths );
 
 			foreach ( $paths as $path )
 			{
@@ -447,6 +451,7 @@ class DataMapper implements IteratorAggregate
 				case 'auto_populate_has_one':
 				case 'auto_populate_belongs_to':
 				case 'all_array_uses_keys':
+				case 'cascade_save':
 				case 'cascade_delete':
 				case 'extension_overload':
 				case 'delete_uses_timestamp':
@@ -723,6 +728,7 @@ class DataMapper implements IteratorAggregate
 								$value = 'floatval';
 								break;
 
+							// for other key types, there are no default get rules
 							default:
 								continue;
 						}
@@ -782,6 +788,7 @@ class DataMapper implements IteratorAggregate
 								// copy model global settings down if needed
 								empty($relations['join_prefix']) AND $relations['join_prefix'] = $object->dm_config['config']['join_prefix'];
 								empty($relations['cascade_delete']) AND $relations['cascade_delete'] = $object->dm_config['config']['cascade_delete'];
+								empty($relations['cascade_save']) AND $relations['cascade_save'] = $object->dm_config['config']['cascade_save'];
 								empty($relations['auto_populate']) AND $relations['auto_populate'] = $object->dm_config['config']['auto_populate_'.$rel_type];
 
 								// and store it

@@ -326,6 +326,24 @@ die($TODO = 're-code save validation rules');
 	// --------------------------------------------------------------------
 
 	/**
+	 * checks whether the field value is a valid UUID
+	 *
+	 * @ignore
+	 */
+	protected static function rule_valid_uuid($object, $field, $param = array())
+	{
+		// ignore if empty
+		if ( empty($object->{$field}) )
+		{
+			return TRUE;
+		}
+
+		return preg_match('/^\{?[0-9a-f]{8}\-?[0-9a-f]{4}\-?[0-9a-f]{4}\-?'.'[0-9a-f]{4}\-?[0-9a-f]{12}\}?$/i', $object->{$field}) === 1;
+	}
+
+	// --------------------------------------------------------------------
+
+	/**
 	 * checks whether the field value is a valid DateTime
 	 *
 	 * @ignore
@@ -338,7 +356,7 @@ die($TODO = 're-code save validation rules');
 			return TRUE;
 		}
 
-		$date = date_parse($field);
+		$date = date_parse($object->{$field});
 
 		return checkdate($date['month'], $date['day'],$date['year']);
 	}
@@ -358,7 +376,7 @@ die($TODO = 're-code save validation rules');
 			return TRUE;
 		}
 
-		$date = date_parse($fields['year'] . '-' . $fields['month'] . '-' . $fields['day']);
+		$date = date_parse($object->{$field}['year'] . '-' . $object->{$field}['month'] . '-' . $object->{$field}['day']);
 
 		return checkdate($date['month'], $date['day'],$date['year']);
 	}
