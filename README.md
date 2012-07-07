@@ -4,7 +4,9 @@ DataMapper 2 - An ORM for CodeIgniter v2.x
 DataMapper is an Object Relational Mapper written in PHP for CodeIgniter. It is designed to map your Database tables into easy to work with objects, fully aware of the relationships between each other.
 
 > Note:
-> this version is currently under development, and currently not useable in any shape or form!
+> **this version is currently under development, and currently not useable in any shape or form!**
+>
+> The current release version is 1.8.2.1, which can be found at http://bitbucket.org/wanwizard/datamapper
 
 
 Installation
